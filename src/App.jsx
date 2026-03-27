@@ -6,9 +6,17 @@ import {
 } from "date-fns";
 
 // ─── Supabase client ──────────────────────────────────────────────────────────
+const SUPA_URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPA_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+// If env vars are missing, show a clear error rather than infinite spinner
+if (!SUPA_URL || !SUPA_KEY) {
+  console.error("Missing Supabase env vars. Check VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in Vercel.");
+}
+
 const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY
+  SUPA_URL || "https://placeholder.supabase.co",
+  SUPA_KEY || "placeholder"
 );
 
 // ─── Claude API (via secure server proxy) ────────────────────────────────────
@@ -163,18 +171,32 @@ function AuthProvider({ children }) {
   }, [user, fetchProfile]);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      if (session?.user) fetchProfile(session.user.id).finally(() => setLoading(false));
-      else setLoading(false);
-    });
+    const timeout = setTimeout(() => {
+      console.warn("Supabase timed out — check VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in Vercel");
+      setLoading(false);
+    }, 4000);
+
+    supabase.auth.getSession()
+      .then(({ data: { session } }) => {
+        clearTimeout(timeout);
+        setUser(session?.user ?? null);
+        if (session?.user) fetchProfile(session.user.id).finally(() => setLoading(false));
+        else setLoading(false);
+      })
+      .catch((err) => {
+        clearTimeout(timeout);
+        console.error("Supabase getSession failed:", err);
+        setLoading(false);
+      });
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_e, session) => {
       setUser(session?.user ?? null);
       if (session?.user) await fetchProfile(session.user.id);
       else setProfile(null);
       setLoading(false);
     });
-    return () => subscription.unsubscribe();
+
+    return () => { subscription.unsubscribe(); clearTimeout(timeout); };
   }, [fetchProfile]);
 
   const signOut = async () => {
@@ -1400,10 +1422,17 @@ function AppContent() {
   }, [user, profile, loading, path]);
 
   if (loading) {
+    const missingEnv = !import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY;
     return (
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "100vh", gap: 20 }}>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "100vh", gap: 20, padding: 24, textAlign: "center" }}>
         <TaktoLogo size={28} />
         <Spinner size={24} />
+        {missingEnv && (
+          <div style={{ marginTop: 8, padding: "14px 20px", background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 12, maxWidth: 400 }}>
+            <p style={{ color: "#f87171", fontSize: 13, fontWeight: 600, marginBottom: 4 }}>Missing environment variables</p>
+            <p style={{ color: "rgba(248,113,113,0.8)", fontSize: 12 }}>Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in Vercel → Settings → Environment Variables, then redeploy.</p>
+          </div>
+        )}
       </div>
     );
   }
