@@ -30,7 +30,10 @@ async function callClaude(systemPrompt, userPrompt) {
       max_tokens: 1500,
     }),
   });
-  if (!res.ok) throw new Error(`API error ${res.status}`);
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error || `API error ${res.status}`);
+  }
   const data = await res.json();
   return data.content?.[0]?.text || "";
 }
@@ -835,7 +838,7 @@ JSON format: {"ideas":[{"title":"string","description":"string","date_scheduled"
       }
       await fetchIdeas();
       show(`✨ ${newIdeas.length} new ideas generated!`);
-    } catch { show("Generation failed — check your API setup."); }
+    } catch (err) { show("Error: " + (err?.message || String(err))); }
     setGen(false);
   };
 
@@ -1072,7 +1075,7 @@ Today: ${format(new Date(), "MMMM d, yyyy")}.`,
         question
       );
       setMsgs([...next, { role: "assistant", content: answer }]);
-    } catch { show("API error — check your Vercel environment variables."); }
+    } catch (err) { show("Error: " + (err?.message || String(err))); }
     setBusy(false);
   };
 
