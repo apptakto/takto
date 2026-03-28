@@ -215,7 +215,6 @@ function AuthProvider({ children }) {
     setUser(null);
     setProfile(null);
     window.location.hash = "/auth";
-    window.location.reload();
   };
 
   return (
@@ -231,9 +230,22 @@ function useRoute() {
   useEffect(() => {
     const h = () => setPath(window.location.hash.replace("#", "") || "/");
     window.addEventListener("hashchange", h);
-    return () => window.removeEventListener("hashchange", h);
+    // Also check on focus in case hash changed in another tab
+    window.addEventListener("focus", h);
+    return () => {
+      window.removeEventListener("hashchange", h);
+      window.removeEventListener("focus", h);
+    };
   }, []);
-  const navigate = (to) => { window.location.hash = to; };
+  const navigate = (to) => {
+    // Force update even if hash is already the same
+    if (window.location.hash === "#" + to) {
+      setPath(to);
+    } else {
+      window.location.hash = to;
+      setPath(to);
+    }
+  };
   return { path, navigate };
 }
 
@@ -1450,8 +1462,18 @@ function AppContent() {
     );
   }
 
-  if (!user || path === "/auth") return <AuthScreen navigate={navigate} />;
-  if (path === "/onboarding")    return <OnboardingScreen navigate={navigate} />;
+  // Not logged in — always show auth
+  if (!user) return <AuthScreen navigate={navigate} />;
+
+  // Logged in but onboarding not done
+  if (profile && !profile.onboarding_completed) return <OnboardingScreen navigate={navigate} />;
+
+  // Logged in, onboarding done — show app screens
+  // If still on auth/root, redirect to dashboard
+  if (path === "/auth" || path === "/" || path === "/onboarding") {
+    navigate("/dashboard");
+    return null;
+  }
 
   const screens = {
     "/explore":   <ExploreScreen />,
@@ -1463,7 +1485,7 @@ function AppContent() {
 
   return (
     <AppShell path={path} navigate={navigate}>
-      {screens[path] || <ExploreScreen />}
+      {screens[path] || <DashboardScreen />}
     </AppShell>
   );
 }
