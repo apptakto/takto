@@ -452,22 +452,22 @@ function Sidebar({ path, navigate, profile, signOut }) {
           );
         })}
       </nav>
-      {profile && (
-        <div style={{ padding: "12px 10px", borderTop: "1px solid var(--border)" }}>
+      <div style={{ padding: "12px 10px", borderTop: "1px solid var(--border)" }}>
+        {profile?.niche?.length > 0 && (
           <div style={{ fontSize: 11, color: "var(--text3)", marginBottom: 6, padding: "0 4px" }}>
-            {profile.niche?.slice(0, 2).join(" · ")}
+            {profile.niche.slice(0, 2).join(" · ")}
           </div>
-          <button onClick={signOut} style={{
-            display: "flex", alignItems: "center", gap: 8, width: "100%",
-            padding: "9px 12px", borderRadius: 11, background: "transparent", border: "none",
-            color: "var(--text3)", fontSize: 13, cursor: "pointer",
-            fontFamily: "'DM Sans', sans-serif",
-          }}>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-            Sign out
-          </button>
-        </div>
-      )}
+        )}
+        <button onClick={signOut} style={{
+          display: "flex", alignItems: "center", gap: 8, width: "100%",
+          padding: "9px 12px", borderRadius: 11, background: "transparent", border: "none",
+          color: "var(--text3)", fontSize: 13, cursor: "pointer",
+          fontFamily: "'DM Sans', sans-serif",
+        }}>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          Sign out
+        </button>
+      </div>
     </aside>
   );
 }
@@ -869,7 +869,7 @@ JSON format: {"ideas":[{"title":"string","description":"string","date_scheduled"
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 12, marginBottom: 28 }}>
         <div>
           <h1 style={{ fontSize: 24, marginBottom: 3 }}>{greeting} 👋</h1>
-          <p style={{ color: "var(--text2)", fontSize: 13 }}>{profile?.niche?.slice(0, 2).join(" · ")} creator · {profile?.posting_frequency}</p>
+          <p style={{ color: "var(--text2)", fontSize: 13 }}>{profile?.niche?.slice(0, 2).join(" · ") || "Welcome back"}{profile?.posting_frequency ? " · " + profile.posting_frequency : ""}</p>
         </div>
         <Btn onClick={generate} disabled={generating}>
           {generating ? <Spinner size={14} color="#ffffff88"/> : "✨"}
@@ -1411,7 +1411,7 @@ function ProfileScreen({ navigate }) {
         </div>
       </Card>
 
-      <Btn onClick={async () => { await signOut(); navigate("/auth"); }} variant="danger" fullWidth>Sign Out</Btn>
+      <Btn onClick={signOut} variant="danger" fullWidth>Sign Out</Btn>
       <p style={{ textAlign: "center", fontSize: 11, color: "var(--text3)", marginTop: 14 }}>Takto · Made for creators ✨</p>
     </div>
   );
