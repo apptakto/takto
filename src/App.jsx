@@ -1340,6 +1340,11 @@ function ProfileScreen({ navigate }) {
   const [saving, setSaving]   = useState(false);
   const { show, ToastContainer } = useToast();
 
+  // Refresh profile on mount to ensure latest data
+  useEffect(() => {
+    refreshProfile();
+  }, []);
+
   useEffect(() => {
     if (profile) {
       setNiches(profile.niche || []);
