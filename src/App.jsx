@@ -160,29 +160,28 @@ function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   const fetchProfile = useCallback(async (uid) => {
-    console.log("Fetching profile for uid:", uid);
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("niche, style, posting_frequency, notifications_enabled, onboarding_completed")
-      .eq("user_id", uid)
-      .single();
-    console.log("Profile result:", data, "Error:", error);
-    if (data) {
-      setProfile(data);
-    } else if (error) {
-      console.error("Profile fetch error:", error);
-      // Profile row missing — create it
-      if (error.code === "PGRST116") {
-        console.log("Creating missing profile row...");
-        const { data: newProfile } = await supabase
-          .from("profiles")
-          .insert({ user_id: uid, onboarding_completed: false })
-          .select()
-          .single();
-        if (newProfile) setProfile(newProfile);
+    try {
+      const { data } = await supabase
+        .from("profiles")
+        .select("niche, style, posting_frequency, notifications_enabled, onboarding_completed")
+        .eq("user_id", uid)
+        .maybeSingle();
+      if (data) {
+        setProfile(data);
+        return data;
       }
+      // No profile row — create one via upsert
+      const { data: created } = await supabase
+        .from("profiles")
+        .upsert({ user_id: uid, onboarding_completed: false }, { onConflict: "user_id" })
+        .select()
+        .maybeSingle();
+      if (created) setProfile(created);
+      return created;
+    } catch (err) {
+      console.error("fetchProfile error:", err);
+      return null;
     }
-    return data;
   }, []);
 
   const refreshProfile = useCallback(async () => {
@@ -190,10 +189,7 @@ function AuthProvider({ children }) {
   }, [user, fetchProfile]);
 
   useEffect(() => {
-    const timeout = setTimeout(() => {
-      console.warn("Supabase timed out — check VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in Vercel");
-      setLoading(false);
-    }, 4000);
+    const timeout = setTimeout(() => setLoading(false), 5000);
 
     supabase.auth.getSession()
       .then(({ data: { session } }) => {
@@ -202,11 +198,7 @@ function AuthProvider({ children }) {
         if (session?.user) fetchProfile(session.user.id).finally(() => setLoading(false));
         else setLoading(false);
       })
-      .catch((err) => {
-        clearTimeout(timeout);
-        console.error("Supabase getSession failed:", err);
-        setLoading(false);
-      });
+      .catch(() => { clearTimeout(timeout); setLoading(false); });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_e, session) => {
       setUser(session?.user ?? null);
@@ -219,9 +211,11 @@ function AuthProvider({ children }) {
   }, [fetchProfile]);
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    try { await supabase.auth.signOut(); } catch(e) {}
     setUser(null);
     setProfile(null);
+    window.location.hash = "/auth";
+    window.location.reload();
   };
 
   return (
