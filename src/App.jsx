@@ -1401,21 +1401,21 @@ function ProfileScreen({ navigate }) {
             {label("Niches")}
             {editing
               ? <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>{NICHES.map(n => <Chip key={n.label} label={n.label} icon={n.icon} selected={niches.includes(n.label)} onClick={() => setNiches(p => p.includes(n.label) ? p.filter(x => x !== n.label) : [...p, n.label])} />)}</div>
-              : <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>{niches.map(n => <span key={n} style={{ fontSize: 12, padding: "3px 10px", borderRadius: 50, background: "var(--surface2)", color: "var(--text2)", border: "1px solid var(--border)" }}>{n}</span>)}</div>
+              : <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>{(profile?.niche || []).map(n => <span key={n} style={{ fontSize: 12, padding: "3px 10px", borderRadius: 50, background: "var(--surface2)", color: "var(--text2)", border: "1px solid var(--border)" }}>{n}</span>)}</div>
             }
           </div>
           <div>
             {label("Content Styles")}
             {editing
               ? <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>{STYLES.map(s => <Chip key={s.label} label={s.label} icon={s.icon} selected={styles.includes(s.label)} onClick={() => setStyles(p => p.includes(s.label) ? p.filter(x => x !== s.label) : [...p, s.label])} />)}</div>
-              : <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>{styles.map(s => <span key={s} style={{ fontSize: 12, padding: "3px 10px", borderRadius: 50, background: "var(--surface2)", color: "var(--text2)", border: "1px solid var(--border)" }}>{s}</span>)}</div>
+              : <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>{(profile?.style || []).map(s => <span key={s} style={{ fontSize: 12, padding: "3px 10px", borderRadius: 50, background: "var(--surface2)", color: "var(--text2)", border: "1px solid var(--border)" }}>{s}</span>)}</div>
             }
           </div>
           <div>
             {label("Posting Frequency")}
             {editing
               ? <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>{FREQS.map(f => <Chip key={f.value} label={f.label} selected={freq === f.value} onClick={() => setFreq(f.value)} />)}</div>
-              : <span style={{ fontSize: 13, color: "var(--text2)" }}>{freq}</span>
+              : <span style={{ fontSize: 13, color: "var(--text2)" }}>{profile?.posting_frequency || freq}</span>
             }
           </div>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingTop: 14, borderTop: "1px solid var(--border)" }}>
