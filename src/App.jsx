@@ -160,12 +160,28 @@ function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   const fetchProfile = useCallback(async (uid) => {
-    const { data } = await supabase
+    console.log("Fetching profile for uid:", uid);
+    const { data, error } = await supabase
       .from("profiles")
       .select("niche, style, posting_frequency, notifications_enabled, onboarding_completed")
       .eq("user_id", uid)
       .single();
-    if (data) setProfile(data);
+    console.log("Profile result:", data, "Error:", error);
+    if (data) {
+      setProfile(data);
+    } else if (error) {
+      console.error("Profile fetch error:", error);
+      // Profile row missing — create it
+      if (error.code === "PGRST116") {
+        console.log("Creating missing profile row...");
+        const { data: newProfile } = await supabase
+          .from("profiles")
+          .insert({ user_id: uid, onboarding_completed: false })
+          .select()
+          .single();
+        if (newProfile) setProfile(newProfile);
+      }
+    }
     return data;
   }, []);
 
