@@ -32,7 +32,7 @@ const G = "linear-gradient(135deg, #00d4aa 0%, #7c3aed 45%, #e91e8c 100%)";
 
 // ─── Global CSS ───────────────────────────────────────────────────────────────
 const css = `
-  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Syne:wght@700;800&display=swap');
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
     --bg: #0a0a0f; --s1: #13131a; --s2: #1a1a24; --s3: #22222f;
@@ -323,48 +323,110 @@ function AuthScreen({ navigate }) {
     setBusy(false);
   };
 
+  // Figma-exact styles
+  const font = "'Inter', sans-serif";
+
   return (
-    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: "24px 20px", position: "relative", overflow: "hidden" }}>
-      <div style={{ position: "fixed", top: "-20%", right: "-10%", width: 450, height: 450, borderRadius: "50%", background: "radial-gradient(circle, rgba(124,58,237,0.18) 0%, transparent 70%)", pointerEvents: "none" }} />
-      <div style={{ position: "fixed", bottom: "-15%", left: "-10%", width: 380, height: 380, borderRadius: "50%", background: "radial-gradient(circle, rgba(0,212,170,0.12) 0%, transparent 70%)", pointerEvents: "none" }} />
-      <div className="fu" style={{ width: "100%", maxWidth: 400 }}>
-        <div style={{ textAlign: "center", marginBottom: 36 }}>
-          <TaktoLogo size={30} />
-          <p style={{ color: "var(--t2)", marginTop: 10, fontSize: 15 }}>No more creator's block.</p>
+    <div style={{ minHeight: "100vh", background: "#0a0a0f", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "24px 20px", position: "relative", overflow: "hidden" }}>
+      {/* Background gradient blobs - matching Figma exactly */}
+      <div style={{ position: "fixed", top: "-10%", right: "-5%", width: 520, height: 640, borderRadius: "50%", background: "radial-gradient(ellipse at center, rgba(119,0,255,0.25) 0%, rgba(119,0,255,0.08) 50%, transparent 75%)", pointerEvents: "none", filter: "blur(40px)" }} />
+      <div style={{ position: "fixed", bottom: "-15%", left: "-8%", width: 480, height: 480, borderRadius: "50%", background: "radial-gradient(ellipse at center, rgba(0,180,220,0.2) 0%, rgba(0,180,220,0.06) 50%, transparent 75%)", pointerEvents: "none", filter: "blur(40px)" }} />
+      <div style={{ position: "fixed", bottom: "5%", left: "15%", width: 300, height: 300, borderRadius: "50%", background: "radial-gradient(ellipse at center, rgba(192,0,128,0.15) 0%, transparent 70%)", pointerEvents: "none", filter: "blur(30px)" }} />
+
+      <div className="fu" style={{ width: "100%", maxWidth: 400, position: "relative", zIndex: 1 }}>
+        {/* Logo — Takto wordmark SVG */}
+        <div style={{ textAlign: "center", marginBottom: 32 }}>
+          <div style={{ display: "inline-flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
+            <svg width="204" height="60" viewBox="0 0 204 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <text x="0" y="48" fontFamily="'Syne', sans-serif" fontWeight="800" fontSize="56" fill="white" letterSpacing="-2">Takto</text>
+            </svg>
+            <p style={{ fontFamily: font, fontWeight: 400, fontSize: 18, color: "rgba(255,255,255,0.8)", margin: 0 }}>No more creator's block.</p>
+          </div>
         </div>
-        <Card style={{ padding: 28 }}>
-          <h2 style={{ fontSize: 19, textAlign: "center", marginBottom: 4 }}>{mode === "forgot" ? "Reset Password" : mode === "signup" ? "Create Account" : "Welcome back"}</h2>
-          <p style={{ color: "var(--t2)", fontSize: 13, textAlign: "center", marginBottom: 22 }}>{mode === "forgot" ? "We'll send you a reset link" : mode === "signup" ? "Start generating content ideas" : "Sign in to Takto"}</p>
+
+        {/* Card */}
+        <div style={{ background: "#13131a", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, padding: "32px 29px 28px", width: "100%" }}>
+
+          {/* "Sign in" heading inside card */}
+          <p style={{ fontFamily: font, fontWeight: 400, fontSize: 18, color: "rgba(255,255,255,0.6)", textAlign: "center", marginBottom: 16, marginTop: 0 }}>
+            {mode === "forgot" ? "Reset password" : mode === "signup" ? "Create account" : "Sign in"}
+          </p>
+
           {mode !== "forgot" && (
             <>
-              <button onClick={googleSignIn} disabled={busy} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, width: "100%", padding: "11px 16px", background: "var(--s2)", border: "1px solid var(--b)", borderRadius: 50, color: "var(--t)", fontSize: 14, fontWeight: 500, cursor: "pointer", marginBottom: 14, fontFamily: "'DM Sans',sans-serif" }}>
+              {/* Google button */}
+              <button onClick={googleSignIn} disabled={busy} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 9, width: "100%", height: 42, background: "#1a1a24", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 50, color: "#f0f0f8", fontSize: 14, fontWeight: 500, cursor: busy ? "not-allowed" : "pointer", marginBottom: 14, fontFamily: font, opacity: busy ? 0.6 : 1 }}>
                 <svg width="17" height="17" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
                 Continue with Google
               </button>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
-                <div style={{ flex: 1, height: 1, background: "var(--b)" }} />
-                <span style={{ color: "var(--t3)", fontSize: 11 }}>or</span>
-                <div style={{ flex: 1, height: 1, background: "var(--b)" }} />
+
+              {/* Divider */}
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
+                <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.1)" }} />
+                <span style={{ fontFamily: font, fontSize: 11, color: "rgba(255,255,255,0.35)" }}>or</span>
+                <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.1)" }} />
               </div>
             </>
           )}
+
+          {/* Inputs */}
           <form onSubmit={submit} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            <input type="email" placeholder="Email address" value={email} onChange={e => setEmail(e.target.value)} required autoComplete="email" />
-            {mode !== "forgot" && <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} required minLength={6} autoComplete={mode === "signup" ? "new-password" : "current-password"} />}
-            {err && <p style={{ color: "#f87171", fontSize: 13 }}>{err}</p>}
-            {ok && <p style={{ color: "#34d399", fontSize: 13 }}>{ok}</p>}
-            <Btn type="submit" disabled={busy} fullWidth style={{ marginTop: 2 }}>
+            <input
+              type="email" placeholder="Email address"
+              value={email} onChange={e => setEmail(e.target.value)}
+              required autoComplete="email"
+              style={{ height: 46, background: "#1a1a24", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, color: "#f0f0f8", fontFamily: font, fontSize: 15, fontWeight: 400, padding: "0 16px", outline: "none", width: "100%", boxSizing: "border-box" }}
+            />
+            {mode !== "forgot" && (
+              <input
+                type="password" placeholder="Password"
+                value={password} onChange={e => setPassword(e.target.value)}
+                required minLength={6}
+                autoComplete={mode === "signup" ? "new-password" : "current-password"}
+                style={{ height: 46, background: "#1a1a24", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, color: "#f0f0f8", fontFamily: font, fontSize: 15, fontWeight: 400, padding: "0 16px", outline: "none", width: "100%", boxSizing: "border-box" }}
+              />
+            )}
+
+            {err && <p style={{ fontFamily: font, color: "#f87171", fontSize: 13, margin: 0 }}>{err}</p>}
+            {ok  && <p style={{ fontFamily: font, color: "#34d399", fontSize: 13, margin: 0 }}>{ok}</p>}
+
+            {/* Sign In button */}
+            <button
+              type="submit" disabled={busy}
+              style={{ height: 40, width: "100%", background: "linear-gradient(135deg, #00d4aa 0%, #7c3aed 45%, #e91e8c 100%)", border: "none", borderRadius: 50, color: "#fff", fontFamily: font, fontSize: 15, fontWeight: 600, cursor: busy ? "not-allowed" : "pointer", opacity: busy ? 0.7 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, boxShadow: "0 4px 18px rgba(124,58,237,0.35)", marginTop: 4 }}
+            >
               {busy && <Spinner size={14} />}
               {mode === "forgot" ? "Send Reset Link" : mode === "signup" ? "Sign Up" : "Sign In"}
-            </Btn>
+            </button>
           </form>
-          <div style={{ marginTop: 18, display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
-            {mode !== "forgot" && <button onClick={() => { setMode(mode === "signup" ? "login" : "signup"); setErr(""); setOk(""); }} style={{ background: "none", border: "none", color: "var(--t2)", fontSize: 13, cursor: "pointer" }}>{mode === "signup" ? "Already have an account? Sign in" : "Don't have an account? Sign up"}</button>}
-            {mode === "login" && <button onClick={() => { setMode("forgot"); setErr(""); setOk(""); }} style={{ background: "none", border: "none", color: "var(--t3)", fontSize: 12, cursor: "pointer" }}>Forgot password?</button>}
-            {mode === "forgot" && <button onClick={() => setMode("login")} style={{ background: "none", border: "none", color: "var(--t2)", fontSize: 13, cursor: "pointer" }}>Back to sign in</button>}
+
+          {/* Links */}
+          <div style={{ marginTop: 16, display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
+            {mode !== "forgot" && (
+              <button onClick={() => { setMode(mode === "signup" ? "login" : "signup"); setErr(""); setOk(""); }}
+                style={{ background: "none", border: "none", fontFamily: font, fontSize: 15, color: "rgba(255,255,255,0.6)", cursor: "pointer", padding: 0 }}>
+                {mode === "signup" ? "Already have an account? Sign in" : "Don't have an account? Sign up"}
+              </button>
+            )}
+            {mode === "login" && (
+              <button onClick={() => { setMode("forgot"); setErr(""); setOk(""); }}
+                style={{ background: "none", border: "none", fontFamily: font, fontSize: 15, color: "rgba(255,255,255,0.35)", cursor: "pointer", padding: 0 }}>
+                Forgot password?
+              </button>
+            )}
+            {mode === "forgot" && (
+              <button onClick={() => setMode("login")}
+                style={{ background: "none", border: "none", fontFamily: font, fontSize: 15, color: "rgba(255,255,255,0.6)", cursor: "pointer", padding: 0 }}>
+                Back to sign in
+              </button>
+            )}
           </div>
-        </Card>
-        <p style={{ textAlign: "center", color: "var(--t3)", fontSize: 11, marginTop: 18 }}>By signing in you agree to our Terms & Privacy Policy</p>
+        </div>
+
+        {/* Footer */}
+        <p style={{ textAlign: "center", fontFamily: font, fontSize: 12, color: "rgba(255,255,255,0.35)", marginTop: 20 }}>
+          By signing in you agree to our Terms &amp; Privacy Policy
+        </p>
       </div>
     </div>
   );
