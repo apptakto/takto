@@ -456,7 +456,6 @@ function OnboardingScreen({ navigate }) {
   const [step, setStep] = useState(0);
   const [niches, setNiches] = useState([]);
   const [styles, setStyles] = useState([]);
-  const [freq, setFreq] = useState("3x a week");
   const [notifs, setNotifs] = useState(true);
   const [busy, setBusy] = useState(false);
 
@@ -465,13 +464,13 @@ function OnboardingScreen({ navigate }) {
   const finish = async () => {
     if (!user) return;
     setBusy(true);
-    await supabase.from("profiles").update({ niche: niches, style: styles, posting_frequency: freq, notifications_enabled: notifs, onboarding_completed: true }).eq("user_id", user.id);
+    await supabase.from("profiles").update({ niche: niches, style: styles, notifications_enabled: notifs, onboarding_completed: true }).eq("user_id", user.id);
     await refreshProfile();
     navigate("/generate");
     setBusy(false);
   };
 
-  const STEPS = ["Your niche", "Your style", "Frequency", "Done"];
+  const STEPS = ["Your niche", "Your style", "Done"];
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--bg)", display: "flex", flexDirection: "column", alignItems: "center", padding: "0 20px 60px" }}>
@@ -502,23 +501,6 @@ function OnboardingScreen({ navigate }) {
         </div>}
 
         {step === 2 && <div className="fi">
-          <h1 style={{ fontSize: 26, textAlign: "center", marginBottom: 6 }}>How often do you post?</h1>
-          <p style={{ color: "var(--t2)", textAlign: "center", marginBottom: 22, fontSize: 14 }}>We'll tailor your ideas to your schedule</p>
-          <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
-            {FREQS.map(f => (
-              <button key={f.value} onClick={() => setFreq(f.value)} style={{ display: "flex", alignItems: "center", gap: 12, padding: "13px 16px", background: freq === f.value ? "rgba(124,58,237,0.12)" : "var(--s1)", border: `1.5px solid ${freq === f.value ? "var(--p)" : "var(--b)"}`, borderRadius: 12, cursor: "pointer", textAlign: "left", fontFamily: "'Inter',sans-serif", color: "var(--t)", transition: "all 0.12s" }}>
-                <span style={{ fontSize: 18 }}>{f.icon}</span>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 14, fontWeight: 600 }}>{f.label}</div>
-                  <div style={{ fontSize: 12, color: "var(--t2)" }}>{f.desc}</div>
-                </div>
-                {f.rec && <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 50, background: G, color: "#fff", fontWeight: 600 }}>Recommended</span>}
-              </button>
-            ))}
-          </div>
-        </div>}
-
-        {step === 3 && <div className="fi">
           <h1 style={{ fontSize: 26, textAlign: "center", marginBottom: 6 }}>You're all set 🎉</h1>
           <p style={{ color: "var(--t2)", textAlign: "center", marginBottom: 22, fontSize: 14 }}>Takto is ready to generate ideas for you</p>
           <Card style={{ padding: 18, marginBottom: 14 }}>
@@ -533,13 +515,12 @@ function OnboardingScreen({ navigate }) {
           <div style={{ padding: 16, background: "rgba(124,58,237,0.06)", borderRadius: 12, border: "1px solid rgba(124,58,237,0.12)", fontSize: 13, color: "var(--t2)", lineHeight: 1.8 }}>
             <div>🎯 {niches.slice(0, 3).join(", ")}{niches.length > 3 ? ` +${niches.length - 3} more` : ""}</div>
             <div>🎨 {styles.slice(0, 2).join(", ")}{styles.length > 2 ? ` +${styles.length - 2} more` : ""}</div>
-            <div>📅 {freq}</div>
           </div>
         </div>}
 
         <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
           {step > 0 && <Btn onClick={() => setStep(s => s - 1)} variant="secondary">← Back</Btn>}
-          {step < 3
+          {step < 2
             ? <Btn onClick={() => setStep(s => s + 1)} disabled={!canNext} style={{ flex: 1 }}>Continue →</Btn>
             : <Btn onClick={finish} disabled={busy} style={{ flex: 1 }}>{busy && <Spinner size={13} />} Start generating ⚡</Btn>
           }
@@ -559,7 +540,7 @@ function ScheduleScreen({ navigate }) {
   const [month, setMonth] = useState(new Date());
   const [dragId, setDragId] = useState(null);
   const [selected, setSelected] = useState(null);
-  const [tab, setTab] = useState("ideas"); // ideas | calendar
+
   const { show, ToastContainer } = useToast();
 
   const fetchIdeas = useCallback(async () => {
@@ -636,63 +617,10 @@ function ScheduleScreen({ navigate }) {
         </div>
       )}
 
-      {/* Tabs */}
-      <div style={{ display: "flex", gap: 3, marginBottom: 18, background: "var(--s1)", padding: 3, borderRadius: 10, width: "fit-content", border: "1px solid var(--b)" }}>
-        {[["ideas", "💡 Ideas"], ["calendar", "📅 Calendar"]].map(([t, l]) => (
-          <button key={t} onClick={() => setTab(t)} style={{ padding: "7px 16px", borderRadius: 8, fontSize: 13, fontWeight: tab === t ? 600 : 400, background: tab === t ? "var(--s2)" : "transparent", border: "none", color: tab === t ? "var(--t)" : "var(--t3)", cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>{l}</button>
-        ))}
-      </div>
 
-      {/* IDEAS TAB */}
-      {tab === "ideas" && (
-        <>
-          {loading ? (
-            <div style={{ display: "flex", justifyContent: "center", padding: 48 }}><Spinner size={24} /></div>
-          ) : ideas.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "52px 20px" }}>
-              <div style={{ fontSize: 36, marginBottom: 12 }}>⚡</div>
-              <h3 style={{ fontSize: 18, marginBottom: 8 }}>No ideas yet</h3>
-              <p style={{ color: "var(--t2)", fontSize: 14, marginBottom: 20 }}>Generate your first batch of content ideas</p>
-              <Btn onClick={() => navigate("/generate")}>⚡ Generate Ideas</Btn>
-            </div>
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {ideas.map((idea, i) => (
-                <div key={idea.id} className="fu" draggable onDragStart={() => setDragId(idea.id)}
-                  style={{ animationDelay: `${i * 25}ms`, background: "var(--s1)", border: `1px solid ${idea.status === "saved" ? "rgba(96,165,250,0.2)" : "var(--b)"}`, borderRadius: "var(--r)", padding: "13px 15px", cursor: "grab" }}>
-                  <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
-                    {/* Drag handle */}
-                    <div style={{ color: "var(--t3)", marginTop: 1, flexShrink: 0, cursor: "grab" }}>
-                      <svg width="12" height="16" viewBox="0 0 12 16" fill="currentColor"><circle cx="4" cy="3" r="1.5"/><circle cx="8" cy="3" r="1.5"/><circle cx="4" cy="8" r="1.5"/><circle cx="8" cy="8" r="1.5"/><circle cx="4" cy="13" r="1.5"/><circle cx="8" cy="13" r="1.5"/></svg>
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 5 }}>{idea.title}</div>
-                      {idea.description && <p style={{ fontSize: 12, color: "var(--t2)", lineHeight: 1.5, marginBottom: 7 }}>{idea.description}</p>}
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
-                        <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 50, background: `${SC[idea.status] || SC.pending}15`, color: SC[idea.status] || SC.pending, fontWeight: 500 }}>{idea.status || "pending"}</span>
-                        {idea.difficulty && <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 50, background: `${DC[idea.difficulty]}12`, color: DC[idea.difficulty], fontWeight: 500 }}>{idea.difficulty}</span>}
-                        {idea.date_scheduled && <span style={{ fontSize: 11, color: "var(--t3)" }}>📅 {format(parseISO(idea.date_scheduled), "MMM d")}</span>}
-                      </div>
-                    </div>
-                    <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
-                      {idea.status !== "saved" && idea.status !== "used" && (
-                        <button onClick={() => saveIdea(idea.id)} title="Save to schedule" style={{ background: "var(--s2)", border: "1px solid var(--b)", borderRadius: 7, padding: "5px 8px", cursor: "pointer", fontSize: 12, color: "#60a5fa" }}>📌</button>
-                      )}
-                      {idea.status !== "used" && (
-                        <button onClick={() => markUsed(idea.id)} title="Mark as posted" style={{ background: "var(--s2)", border: "1px solid var(--b)", borderRadius: 7, padding: "5px 8px", cursor: "pointer", fontSize: 12, color: "#34d399" }}>✓</button>
-                      )}
-                      <button onClick={() => deleteIdea(idea.id)} title="Delete" style={{ background: "var(--s2)", border: "1px solid var(--b)", borderRadius: 7, padding: "5px 8px", cursor: "pointer", fontSize: 12, color: "var(--t3)" }}>×</button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </>
-      )}
 
-      {/* CALENDAR TAB */}
-      {tab === "calendar" && (
+      {/* CALENDAR */}
+      {(
         <>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
             <p style={{ fontSize: 12, color: "var(--t3)" }}>Drag ideas from the Ideas tab onto a day</p>
@@ -720,11 +648,11 @@ function ScheduleScreen({ navigate }) {
                   return (
                     <div key={ds} onClick={() => setSelected(isSel ? null : day)}
                       onDragOver={e => e.preventDefault()} onDrop={() => drop(ds)}
-                      style={{ minHeight: 60, borderRadius: 9, padding: 5, cursor: "pointer", background: isSel ? "rgba(124,58,237,0.15)" : isToday ? "rgba(124,58,237,0.06)" : "transparent", border: `1px solid ${isSel ? "var(--p)" : isToday ? "rgba(124,58,237,0.25)" : "var(--b)"}`, opacity: inMonth ? 1 : 0.22, transition: "all 0.1s" }}>
-                      <div style={{ fontSize: 10, fontWeight: isToday ? 700 : 400, color: isToday ? "#c4b5fd" : "var(--t2)", marginBottom: 3 }}>{format(day, "d")}</div>
+                      style={{ minHeight: 90, borderRadius: 10, padding: "8px 6px 6px", cursor: "pointer", background: isSel ? "rgba(124,58,237,0.14)" : isToday ? "rgba(124,58,237,0.05)" : "var(--s1)", border: `1px solid ${isSel ? "rgba(124,58,237,0.5)" : isToday ? "rgba(124,58,237,0.22)" : "var(--b)"}`, opacity: inMonth ? 1 : 0.28, transition: "all 0.12s", position: "relative" }}>
+                      <div style={{ width: 24, height: 24, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: isToday ? G : "transparent", fontSize: 12, fontWeight: isToday ? 700 : 400, color: isToday ? "#fff" : isSel ? "#c4b5fd" : "var(--t2)", marginBottom: 5 }}>{format(day, "d")}</div>
                       {dayIdeas.slice(0, 2).map(idea => (
-                        <div key={idea.id} draggable onDragStart={e => { e.stopPropagation(); setDragId(idea.id); }} onClick={e => e.stopPropagation()}
-                          style={{ fontSize: 8, padding: "2px 4px", borderRadius: 4, marginBottom: 2, background: `${SC[idea.status] || SC.pending}20`, color: SC[idea.status] || SC.pending, border: `1px solid ${SC[idea.status] || SC.pending}30`, cursor: "grab", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", fontWeight: 500 }}>
+                        <div key={idea.id} draggable onDragStart={e => { e.stopPropagation(); setDragId(idea.id); }} onClick={e => e.stopPropagation()} title={idea.title}
+                          style={{ fontSize: 10, padding: "3px 6px", borderRadius: 5, marginBottom: 3, background: `${SC[idea.status] || SC.pending}18`, color: SC[idea.status] || SC.pending, border: `1px solid ${SC[idea.status] || SC.pending}25`, cursor: "grab", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", fontWeight: 500, lineHeight: "1.3" }}>
                           {idea.title}
                         </div>
                       ))}
@@ -755,7 +683,6 @@ function ScheduleScreen({ navigate }) {
               No ideas on {format(selected, "MMM d")} — drag one here from Ideas tab
             </div>
           )}
-        </>
       )}
     </div>
   );
@@ -775,6 +702,7 @@ function GenerateScreen() {
   const [ideas, setIdeas] = useState([]);
   const [generating, setGenerating] = useState(false);
   const [trendMode, setTrendMode] = useState(false);
+  const [selectedTrends, setSelectedTrends] = useState([]);
   const [savedIds, setSavedIds] = useState(new Set());
   const [expandedId, setExpandedId] = useState(null);
   const { show, ToastContainer } = useToast();
@@ -785,8 +713,9 @@ function GenerateScreen() {
     setIdeas([]);
     setExpandedId(null);
     try {
+      const activeTrends = selectedTrends.length > 0 ? selectedTrends : TREND_TOPICS.slice(0, 5);
       const trendContext = trendMode
-        ? `\nIMPORTANT: Make every idea trend-aware. Use these current trending formats and adapt them to the creator's niche: ${TREND_TOPICS.slice(0, 6).join(", ")}. Each idea should feel like it's riding a current wave.`
+        ? `\nIMPORTANT: Make every idea trend-aware. The creator has selected these trending formats: ${activeTrends.join(", ")}. Adapt each to their niche — make ideas feel timely and viral, not generic.`
         : "";
 
       const text = await callClaude(
@@ -901,14 +830,33 @@ JSON: {"ideas":[{"title":"","hook":"","format":"","time_to_create":"","why_it_wo
         </button>
       </div>
 
-      {/* Trending pills - visible when trend mode on */}
+      {/* Trending hashtags — selectable, visible when trend mode on */}
       {trendMode && (
-        <div className="fi sx" style={{ marginBottom: 20, paddingBottom: 2 }}>
-          <div style={{ display: "flex", gap: 6, minWidth: "max-content" }}>
-            {TREND_TOPICS.map(t => (
-              <span key={t} style={{ padding: "5px 12px", borderRadius: 50, background: "rgba(233,30,140,0.07)", border: "1px solid rgba(233,30,140,0.15)", fontSize: 12, color: "#e91e8c", whiteSpace: "nowrap" }}>#{t.replace(/ /g, "")}</span>
-            ))}
+        <div className="fi" style={{ marginBottom: 20 }}>
+          <p style={{ fontSize: 12, color: "var(--t3)", marginBottom: 8 }}>Select trending formats to include in your ideas:</p>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+            {TREND_TOPICS.map(t => {
+              const sel = selectedTrends.includes(t);
+              return (
+                <button key={t} onClick={() => setSelectedTrends(p => sel ? p.filter(x => x !== t) : [...p, t])}
+                  style={{
+                    padding: "6px 12px", borderRadius: 50, fontSize: 12, fontWeight: sel ? 600 : 400,
+                    background: sel ? "rgba(233,30,140,0.12)" : "rgba(233,30,140,0.04)",
+                    border: `1.5px solid ${sel ? "rgba(233,30,140,0.45)" : "rgba(233,30,140,0.15)"}`,
+                    color: sel ? "#e91e8c" : "rgba(233,30,140,0.6)",
+                    cursor: "pointer", fontFamily: "'Inter',sans-serif",
+                    transition: "all 0.12s",
+                  }}>
+                  #{t.replace(/ /g, "")}
+                </button>
+              );
+            })}
           </div>
+          {selectedTrends.length > 0 && (
+            <p style={{ fontSize: 11, color: "var(--t3)", marginTop: 8 }}>
+              {selectedTrends.length} format{selectedTrends.length > 1 ? "s" : ""} selected — Claude will bias ideas toward these
+            </p>
+          )}
         </div>
       )}
 
@@ -1027,7 +975,6 @@ function ProfileScreen() {
   const [editing, setEditing] = useState(false);
   const [niches, setNiches] = useState([]);
   const [styles, setStyles] = useState([]);
-  const [freq, setFreq] = useState("3x a week");
   const [notifs, setNotifs] = useState(true);
   const [saving, setSaving] = useState(false);
   const { show, ToastContainer } = useToast();
@@ -1036,14 +983,13 @@ function ProfileScreen() {
     if (profile) {
       setNiches(profile.niche || []);
       setStyles(profile.style || []);
-      setFreq(profile.posting_frequency || "3x a week");
       setNotifs(profile.notifications_enabled ?? true);
     }
   }, [profile]);
 
   const save = async () => {
     setSaving(true);
-    await supabase.from("profiles").update({ niche: niches, style: styles, posting_frequency: freq, notifications_enabled: notifs }).eq("user_id", user.id);
+    await supabase.from("profiles").update({ niche: niches, style: styles, notifications_enabled: notifs }).eq("user_id", user.id);
     await refreshProfile();
     setEditing(false);
     show("Profile updated ✓", "success");
@@ -1061,7 +1007,7 @@ function ProfileScreen() {
         <div style={{ width: 48, height: 48, borderRadius: 13, background: G, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 800, color: "#fff", fontFamily: "'Syne',sans-serif", flexShrink: 0 }}>{user?.email?.[0]?.toUpperCase()}</div>
         <div>
           <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 2 }}>{user?.email}</div>
-          <div style={{ fontSize: 12, color: "var(--t3)" }}>{profile?.posting_frequency || "—"} · {profile?.niche?.length || 0} niches</div>
+          <div style={{ fontSize: 12, color: "var(--t3)" }}>{profile?.niche?.length || 0} niches · {profile?.style?.length || 0} styles</div>
         </div>
       </Card>
 
@@ -1088,13 +1034,7 @@ function ProfileScreen() {
               : <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>{(profile?.style || []).map(s => <span key={s} style={{ fontSize: 12, padding: "3px 9px", borderRadius: 50, background: "var(--s2)", color: "var(--t2)", border: "1px solid var(--b)" }}>{s}</span>)}</div>
             }
           </div>
-          <div>
-            {lbl("Posting frequency")}
-            {editing
-              ? <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>{FREQS.map(f => <Chip key={f.value} label={f.label} selected={freq === f.value} onClick={() => setFreq(f.value)} />)}</div>
-              : <span style={{ fontSize: 13, color: "var(--t2)" }}>{profile?.posting_frequency || "—"}</span>
-            }
-          </div>
+
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingTop: 12, borderTop: "1px solid var(--b)" }}>
             <div><div style={{ fontSize: 13, fontWeight: 500, marginBottom: 2 }}>Posting reminders</div><div style={{ fontSize: 12, color: "var(--t3)" }}>Notifications on post days</div></div>
             <Toggle value={notifs} onChange={editing ? setNotifs : () => {}} />
