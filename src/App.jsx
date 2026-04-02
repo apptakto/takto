@@ -531,7 +531,7 @@ function OnboardingScreen({ navigate }) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// SCHEDULE SCREEN — Ideas list + Calendar
+// SCHEDULE SCREEN — Calendar only, ideas shown in day detail panel
 // ═══════════════════════════════════════════════════════════════════════════════
 function ScheduleScreen({ navigate }) {
   const { user } = useAuth();
@@ -540,7 +540,6 @@ function ScheduleScreen({ navigate }) {
   const [month, setMonth] = useState(new Date());
   const [dragId, setDragId] = useState(null);
   const [selected, setSelected] = useState(null);
-
   const { show, ToastContainer } = useToast();
 
   const fetchIdeas = useCallback(async () => {
@@ -578,26 +577,25 @@ function ScheduleScreen({ navigate }) {
     setDragId(null);
   };
 
-  // Status colours
   const SC = { pending: "#fbbf24", saved: "#60a5fa", used: "#34d399" };
   const DC = { Easy: "#34d399", Medium: "#fbbf24", Hard: "#f87171" };
 
-  // Calendar
+  // Calendar grid
   const days = [];
   let d = startOfWeek(startOfMonth(month), { weekStartsOn: 1 });
   while (d <= endOfWeek(endOfMonth(month), { weekStartsOn: 1 })) { days.push(d); d = addDays(d, 1); }
-  const saved = ideas.filter(i => i.status === "saved" || i.date_scheduled);
+
   const selIdeas = selected ? ideas.filter(i => i.date_scheduled === format(selected, "yyyy-MM-dd")) : [];
 
-  // Workflow nudge
-  const lastUsed = ideas.find(i => i.status === "used");
-  const daysSince = lastUsed?.created_at ? differenceInDays(new Date(), new Date(lastUsed.created_at)) : null;
-  const savedCount = ideas.filter(i => i.status === "saved").length;
+  // Nudge bar
   const todayStr = format(new Date(), "yyyy-MM-dd");
   const todayCount = ideas.filter(i => i.date_scheduled === todayStr && i.status !== "used").length;
+  const savedCount = ideas.filter(i => i.status === "saved").length;
+  const lastUsed = ideas.find(i => i.status === "used");
+  const daysSince = lastUsed?.created_at ? differenceInDays(new Date(), new Date(lastUsed.created_at)) : null;
 
   return (
-    <div style={{ padding: "20px 18px 32px", maxWidth: 840, margin: "0 auto" }}>
+    <div style={{ padding: "20px 18px 40px", maxWidth: 900, margin: "0 auto" }}>
       <ToastContainer />
 
       {/* Header */}
@@ -608,7 +606,7 @@ function ScheduleScreen({ navigate }) {
 
       {/* Nudge bar */}
       {ideas.length > 0 && (
-        <div className="sx" style={{ marginBottom: 16, paddingBottom: 2 }}>
+        <div className="sx" style={{ marginBottom: 18, paddingBottom: 2 }}>
           <div style={{ display: "flex", gap: 8, minWidth: "max-content" }}>
             {todayCount > 0 && <div style={{ padding: "7px 14px", background: "rgba(52,211,153,0.08)", border: "1px solid rgba(52,211,153,0.18)", borderRadius: 50, fontSize: 12, fontWeight: 500, color: "#34d399", whiteSpace: "nowrap" }}>✅ {todayCount} idea{todayCount > 1 ? "s" : ""} ready for today</div>}
             {daysSince !== null && daysSince >= 3 && <div style={{ padding: "7px 14px", background: "rgba(251,191,36,0.07)", border: "1px solid rgba(251,191,36,0.18)", borderRadius: 50, fontSize: 12, fontWeight: 500, color: "#fbbf24", whiteSpace: "nowrap" }}>⚠️ Last posted {daysSince} days ago</div>}
@@ -617,72 +615,149 @@ function ScheduleScreen({ navigate }) {
         </div>
       )}
 
-
-
-      {/* CALENDAR */}
-      {(
+      {loading ? (
+        <div style={{ display: "flex", justifyContent: "center", padding: 48 }}><Spinner size={24} /></div>
+      ) : ideas.length === 0 ? (
+        <div style={{ textAlign: "center", padding: "52px 20px" }}>
+          <div style={{ fontSize: 36, marginBottom: 12 }}>📅</div>
+          <h3 style={{ fontSize: 18, marginBottom: 8 }}>Nothing scheduled yet</h3>
+          <p style={{ color: "var(--t2)", fontSize: 14, marginBottom: 20 }}>Generate ideas then save them to your schedule</p>
+          <Btn onClick={() => navigate("/generate")}>⚡ Generate Ideas</Btn>
+        </div>
+      ) : (
         <>
+          {/* Month navigation */}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-            <p style={{ fontSize: 12, color: "var(--t3)" }}>Drag ideas from the Ideas tab onto a day</p>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <button onClick={() => setMonth(subMonths(month, 1))} style={{ background: "var(--s1)", border: "1px solid var(--b)", borderRadius: 8, padding: "6px 10px", color: "var(--t)", cursor: "pointer" }}>‹</button>
-              <span style={{ fontWeight: 600, fontSize: 13, minWidth: 110, textAlign: "center" }}>{format(month, "MMMM yyyy")}</span>
-              <button onClick={() => setMonth(addMonths(month, 1))} style={{ background: "var(--s1)", border: "1px solid var(--b)", borderRadius: 8, padding: "6px 10px", color: "var(--t)", cursor: "pointer" }}>›</button>
+            <h2 style={{ fontSize: 20, fontFamily: "'Syne',sans-serif" }}>{format(month, "MMMM yyyy")}</h2>
+            <div style={{ display: "flex", gap: 6 }}>
+              <button onClick={() => setMonth(subMonths(month, 1))} style={{ width: 34, height: 34, background: "var(--s2)", border: "1px solid var(--b)", borderRadius: 9, color: "var(--t2)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>‹</button>
+              <button onClick={() => setMonth(new Date())} style={{ padding: "0 12px", height: 34, background: "var(--s2)", border: "1px solid var(--b)", borderRadius: 9, color: "var(--t3)", cursor: "pointer", fontSize: 12, fontFamily: "'Inter',sans-serif", fontWeight: 500 }}>Today</button>
+              <button onClick={() => setMonth(addMonths(month, 1))} style={{ width: 34, height: 34, background: "var(--s2)", border: "1px solid var(--b)", borderRadius: 9, color: "var(--t2)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>›</button>
             </div>
           </div>
 
-          <Card style={{ marginBottom: 14 }}>
-            <div style={{ padding: 12 }}>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 3, marginBottom: 4 }}>
-                {["M","T","W","T","F","S","S"].map((d, i) => (
-                  <div key={i} style={{ textAlign: "center", fontSize: 10, color: "var(--t3)", padding: "3px 0", fontWeight: 600 }}>{d}</div>
-                ))}
-              </div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 3 }}>
-                {days.map(day => {
-                  const ds = format(day, "yyyy-MM-dd");
-                  const dayIdeas = ideas.filter(i => i.date_scheduled === ds);
-                  const isToday = isSameDay(day, new Date());
-                  const isSel = selected && isSameDay(day, selected);
-                  const inMonth = isSameMonth(day, month);
-                  return (
-                    <div key={ds} onClick={() => setSelected(isSel ? null : day)}
-                      onDragOver={e => e.preventDefault()} onDrop={() => drop(ds)}
-                      style={{ minHeight: 90, borderRadius: 10, padding: "8px 6px 6px", cursor: "pointer", background: isSel ? "rgba(124,58,237,0.14)" : isToday ? "rgba(124,58,237,0.05)" : "var(--s1)", border: `1px solid ${isSel ? "rgba(124,58,237,0.5)" : isToday ? "rgba(124,58,237,0.22)" : "var(--b)"}`, opacity: inMonth ? 1 : 0.28, transition: "all 0.12s", position: "relative" }}>
-                      <div style={{ width: 24, height: 24, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: isToday ? G : "transparent", fontSize: 12, fontWeight: isToday ? 700 : 400, color: isToday ? "#fff" : isSel ? "#c4b5fd" : "var(--t2)", marginBottom: 5 }}>{format(day, "d")}</div>
-                      {dayIdeas.slice(0, 2).map(idea => (
-                        <div key={idea.id} draggable onDragStart={e => { e.stopPropagation(); setDragId(idea.id); }} onClick={e => e.stopPropagation()} title={idea.title}
-                          style={{ fontSize: 10, padding: "3px 6px", borderRadius: 5, marginBottom: 3, background: `${SC[idea.status] || SC.pending}18`, color: SC[idea.status] || SC.pending, border: `1px solid ${SC[idea.status] || SC.pending}25`, cursor: "grab", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", fontWeight: 500, lineHeight: "1.3" }}>
-                          {idea.title}
-                        </div>
-                      ))}
-                      {dayIdeas.length > 2 && <div style={{ fontSize: 8, color: "var(--t3)" }}>+{dayIdeas.length - 2}</div>}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </Card>
+          {/* Day headers */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 4, marginBottom: 4 }}>
+            {["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].map(day => (
+              <div key={day} style={{ textAlign: "center", fontSize: 11, color: "var(--t3)", padding: "6px 0", fontWeight: 600, letterSpacing: "0.03em" }}>{day}</div>
+            ))}
+          </div>
 
-          {selected && selIdeas.length > 0 && (
-            <Card className="fi" style={{ padding: 16 }}>
-              <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 12 }}>{format(selected, "EEEE, MMMM d")}</div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {selIdeas.map(idea => (
-                  <div key={idea.id} style={{ padding: "10px 12px", background: "var(--s2)", borderRadius: 10, border: "1px solid var(--b)", display: "flex", alignItems: "center", gap: 8 }}>
-                    <div style={{ width: 7, height: 7, borderRadius: "50%", background: SC[idea.status] || SC.pending, flexShrink: 0 }} />
-                    <div style={{ flex: 1, fontWeight: 500, fontSize: 13 }}>{idea.title}</div>
-                    <button onClick={() => markUsed(idea.id)} style={{ background: "none", border: "none", color: "#34d399", cursor: "pointer", fontSize: 12, fontFamily: "'Inter',sans-serif" }}>✓ Posted</button>
+          {/* Calendar grid */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 4, marginBottom: 16 }}>
+            {days.map(day => {
+              const ds = format(day, "yyyy-MM-dd");
+              const dayIdeas = ideas.filter(i => i.date_scheduled === ds);
+              const isToday = isSameDay(day, new Date());
+              const isSel = selected && isSameDay(day, selected);
+              const inMonth = isSameMonth(day, month);
+              return (
+                <div
+                  key={ds}
+                  onClick={() => setSelected(isSel ? null : day)}
+                  onDragOver={e => e.preventDefault()}
+                  onDrop={() => drop(ds)}
+                  style={{
+                    minHeight: 96,
+                    borderRadius: 12,
+                    padding: "8px 7px 7px",
+                    cursor: "pointer",
+                    background: isSel ? "rgba(124,58,237,0.14)" : isToday ? "rgba(124,58,237,0.05)" : "var(--s1)",
+                    border: `1px solid ${isSel ? "rgba(124,58,237,0.45)" : isToday ? "rgba(124,58,237,0.2)" : "var(--b)"}`,
+                    opacity: inMonth ? 1 : 0.22,
+                    transition: "all 0.12s",
+                  }}
+                >
+                  {/* Date circle */}
+                  <div style={{
+                    width: 26, height: 26, borderRadius: "50%",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    background: isToday ? G : "transparent",
+                    fontSize: 12, fontWeight: isToday ? 700 : 400,
+                    color: isToday ? "#fff" : isSel ? "#c4b5fd" : inMonth ? "var(--t)" : "var(--t3)",
+                    marginBottom: 5,
+                  }}>
+                    {format(day, "d")}
                   </div>
-                ))}
+
+                  {/* Idea chips */}
+                  {dayIdeas.slice(0, 3).map(idea => (
+                    <div
+                      key={idea.id}
+                      draggable
+                      onDragStart={e => { e.stopPropagation(); setDragId(idea.id); }}
+                      onClick={e => e.stopPropagation()}
+                      title={idea.title}
+                      style={{
+                        fontSize: 10, padding: "3px 6px", borderRadius: 5, marginBottom: 3,
+                        background: `${SC[idea.status] || SC.pending}18`,
+                        color: SC[idea.status] || SC.pending,
+                        border: `1px solid ${SC[idea.status] || SC.pending}25`,
+                        cursor: "grab", whiteSpace: "nowrap", overflow: "hidden",
+                        textOverflow: "ellipsis", fontWeight: 500, lineHeight: "1.4",
+                      }}
+                    >
+                      {idea.title}
+                    </div>
+                  ))}
+                  {dayIdeas.length > 3 && (
+                    <div style={{ fontSize: 9, color: "var(--t3)", paddingLeft: 1 }}>
+                      +{dayIdeas.length - 3} more
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Selected day detail */}
+          {selected && (
+            <div className="fi" style={{ background: "var(--s1)", borderRadius: "var(--r)", border: "1px solid var(--b)", padding: 18 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: 16, fontFamily: "'Syne',sans-serif" }}>{format(selected, "EEEE")}</div>
+                  <div style={{ fontSize: 12, color: "var(--t3)", marginTop: 2 }}>{format(selected, "MMMM d, yyyy")}</div>
+                </div>
+                <button onClick={() => setSelected(null)} style={{ background: "none", border: "none", color: "var(--t3)", cursor: "pointer", fontSize: 20, lineHeight: 1, padding: "0 4px" }}>×</button>
               </div>
-            </Card>
-          )}
-          {selected && selIdeas.length === 0 && (
-            <div style={{ textAlign: "center", padding: "20px", color: "var(--t3)", fontSize: 13 }}>
-              No ideas on {format(selected, "MMM d")} — drag one here from Ideas tab
+
+              {selIdeas.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "14px 0", color: "var(--t3)", fontSize: 13 }}>
+                  <div style={{ fontSize: 22, marginBottom: 6 }}>📅</div>
+                  Free day — drag an idea here to schedule it
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {selIdeas.map(idea => (
+                    <div key={idea.id} style={{ background: "var(--s2)", borderRadius: 10, border: "1px solid var(--b)", overflow: "hidden" }}>
+                      <div style={{ padding: "11px 13px", display: "flex", alignItems: "flex-start", gap: 10 }}>
+                        <div style={{ width: 8, height: 8, borderRadius: "50%", background: SC[idea.status] || SC.pending, flexShrink: 0, marginTop: 4 }} />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 4 }}>{idea.title}</div>
+                          {idea.description && (
+                            <p style={{ fontSize: 12, color: "var(--t2)", lineHeight: 1.5, margin: "0 0 6px" }}>
+                              {idea.description.length > 140 ? idea.description.slice(0, 140) + "…" : idea.description}
+                            </p>
+                          )}
+                          <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+                            <span style={{ fontSize: 10, padding: "2px 7px", borderRadius: 50, background: `${SC[idea.status] || SC.pending}15`, color: SC[idea.status] || SC.pending, fontWeight: 500 }}>{idea.status || "pending"}</span>
+                            {idea.difficulty && <span style={{ fontSize: 10, padding: "2px 7px", borderRadius: 50, background: `${DC[idea.difficulty]}12`, color: DC[idea.difficulty], fontWeight: 500 }}>{idea.difficulty}</span>}
+                          </div>
+                        </div>
+                        <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
+                          {idea.status !== "used" && (
+                            <button onClick={() => markUsed(idea.id)} style={{ background: "rgba(52,211,153,0.08)", border: "1px solid rgba(52,211,153,0.18)", borderRadius: 7, padding: "5px 9px", cursor: "pointer", fontSize: 11, color: "#34d399", fontFamily: "'Inter',sans-serif", fontWeight: 500 }}>✓ Posted</button>
+                          )}
+                          <button onClick={() => deleteIdea(idea.id)} style={{ background: "none", border: "none", color: "var(--t3)", cursor: "pointer", fontSize: 16, padding: "0 4px" }}>×</button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
+        </>
       )}
     </div>
   );
