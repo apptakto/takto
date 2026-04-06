@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, createContext, useContext } from "react";
+import React, { useState, useEffect, useCallback, createContext, useContext } from "react";
 import { createClient } from "@supabase/supabase-js";
 import {
   format, addDays, startOfMonth, endOfMonth, startOfWeek, endOfWeek,
@@ -38,7 +38,11 @@ const C = {
 const CARD_SHADOW = "0px 5px 0px 0px #17181e";
 const SIDEBAR_SHADOW = "2px 0px 0px 2px #17181e";
 const AI_GRADIENT = "linear-gradient(120deg, #64ffed 0%, #831db6 50%, #ff49d5 100%)";
-const TAKTO_PATH = "M180.622 16.0533C164.259 16.0533 157.243 22.6453 157.243 38.0266C157.243 53.408 164.259 60 180.622 60C196.985 60 204 53.408 204 38.0266C204 22.6453 196.985 16.0533 180.622 16.0533ZM180.622 49.0133C174.782 49.0133 172.27 45.7173 172.27 38.0266C172.27 30.336 174.773 27.04 180.622 27.04C186.471 27.04 188.974 30.336 188.974 38.0266C188.974 45.7173 186.471 49.0133 180.622 49.0133ZM144.504 16.8977H156.194V26.1955H144.504V43.9376C144.504 46.4709 146.173 48.1598 148.676 48.1598H156.194V59.1465H142.836C134.484 59.1465 129.478 54.0799 129.478 45.6265V26.1955H121.323L113.635 37.1822L129.496 59.1556H111.967L97.7747 38.4534V59.1556H82.7483V0H97.7747V35.8293L110.298 16.8977H129.478V5.91102H144.504V16.8977ZM58.7778 16.0533C44.7562 16.0533 38.7456 20.112 38.7456 29.5732H52.9377C52.9377 26.023 54.5256 24.5067 58.2844 24.5067C62.0433 24.5067 63.7926 26.2772 63.7926 30.4177V32.1065H57.9525C43.3388 32.1065 37.077 36.4195 37.077 46.4709C37.077 55.9322 41.5894 59.9909 52.1034 59.9909C58.5356 59.9909 62.2855 57.1217 63.7926 50.6931L67.1298 59.1465H78.819V32.1065C78.819 20.8656 72.8084 16.0533 58.7778 16.0533ZM63.7926 42.2488C63.7926 47.5696 61.7921 49.8577 57.1092 49.8577C53.6016 49.8577 52.1034 48.8408 52.1034 45.6356C52.1034 41.7494 54.3551 40.569 59.6211 40.569H63.7926V42.2579V42.2488ZM50.0939 12.6755H33.3989V59.1556H16.704V12.6755H0V0H50.0939V12.6755Z";
+// Takto logo SVG paths (viewBox 0 0 200 62)
+const TAKTO_O  = "M197.009,26.344c-1.989-3.334-4.748-5.915-8.198-7.669-3.428-1.742-7.336-2.626-11.617-2.626s-8.191.883-11.618,2.626c-3.453,1.755-6.211,4.336-8.198,7.669-1.984,3.327-2.991,7.366-2.991,12.005v1.352c0,4.639,1.006,8.678,2.991,12.005,1.987,3.333,4.746,5.913,8.198,7.668,3.427,1.742,7.336,2.626,11.618,2.626s8.189-.883,11.617-2.626c3.451-1.755,6.209-4.335,8.198-7.668,1.985-3.33,2.992-7.369,2.992-12.005v-1.352c0-4.637-1.007-8.675-2.991-12.005h-.001ZM177.193,50.851c-3.064,0-5.522-.956-7.516-2.924-1.963-1.937-2.958-4.789-2.958-8.479v-.845c0-3.69.995-6.543,2.958-8.479,1.994-1.968,4.452-2.924,7.516-2.924,3.118,0,5.588.955,7.554,2.92,1.938,1.938,2.92,4.792,2.92,8.483v.845c0,3.689-.995,6.542-2.958,8.479-1.995,1.968-4.453,2.924-7.515,2.924h-.001Z";
+const TAKTO_KT = "M140.302,17.232V4.223h-12.332v13.008h-17.356l-.252.281-13.601,15.177h-.298V0h-12.333v60.818h12.333v-16.641h.295l14.445,16.355.252.286h15.998l-1.313-1.419-19.48-21.042,10.164-10.652h11.146v22.807c0,3.092.95,5.609,2.824,7.482,1.873,1.873,4.333,2.823,7.313,2.823h12.67v-10.475h-8.954c-.939,0-1.52-.283-1.52-1.689v-20.949h11.488v-10.474h-11.488v.002Z";
+const TAKTO_A  = "M76.205,50.343c-.939,0-1.521-.283-1.521-1.689v-15.627c0-5.47-1.719-9.721-5.108-12.635-3.354-2.882-7.944-4.343-13.643-4.343-3.706,0-6.904.578-9.505,1.718-2.615,1.145-4.736,2.672-6.304,4.538-1.556,1.848-2.704,3.921-3.411,6.16l-.25.791.786.264,9.799,3.294.904.304.192-.935c.356-1.73,1.124-3.157,2.284-4.241,1.127-1.054,2.922-1.588,5.336-1.588,2.454,0,4.24.554,5.309,1.647,1.088,1.114,1.618,2.509,1.618,4.266v1.52h-10.644c-3.245,0-6.178.518-8.72,1.539-2.592,1.043-4.65,2.62-6.118,4.687-1.477,2.079-2.226,4.673-2.226,7.711s.747,5.654,2.219,7.786c1.463,2.121,3.472,3.754,5.972,4.855,2.463,1.084,5.277,1.634,8.365,1.634,3.047,0,5.505-.456,7.304-1.356,1.803-.902,3.157-1.97,4.024-3.176.645-.899,1.109-1.661,1.405-2.31h.231c.183,1.616.962,2.949,2.324,3.97,1.495,1.121,3.399,1.689,5.659,1.689h7.94v-10.475h-4.223l.002.002ZM62.69,43.417c0,2.529-.832,4.49-2.544,5.997-1.72,1.514-3.99,2.281-6.748,2.281-2.044,0-3.599-.42-4.622-1.248-.983-.795-1.46-1.796-1.46-3.06,0-1.251.442-2.191,1.351-2.872.972-.729,2.364-1.098,4.139-1.098h9.884Z";
+const TAKTO_T  = "47.303,11.826 47.303,10.981 47.303,.845 47.303,0 46.458,0 .845,0 0,0 0,.845 0,10.981 0,11.826 .845,11.826 17.232,11.826 17.232,59.973 17.232,60.818 18.077,60.818 29.227,60.818 30.072,60.818 30.072,59.973 30.072,11.826 46.458,11.826 47.303,11.826";
 
 // ─── Global CSS ───────────────────────────────────────────────────────────────
 const css = `
@@ -85,26 +89,58 @@ function AuthProvider({ children }) {
   }, [user, fetchProfile]);
 
   useEffect(() => {
+    // Safety timeout — never stay stuck loading
     const t = setTimeout(() => setLoading(false), 5000);
+
+    // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       clearTimeout(t);
       setUser(session?.user ?? null);
       if (session?.user) fetchProfile(session.user.id).finally(() => setLoading(false));
       else setLoading(false);
     }).catch(() => { clearTimeout(t); setLoading(false); });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_e, session) => {
+
+    // Listen for auth changes — handle each event type explicitly
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === "SIGNED_OUT") {
+        // User signed out or session expired — clear everything
+        setUser(null);
+        setProfile(null);
+        setLoading(false);
+        return;
+      }
+      if (event === "TOKEN_REFRESHED") {
+        // Token silently refreshed — just update user object, no need to re-fetch profile
+        setUser(session?.user ?? null);
+        return;
+      }
+      if (event === "SIGNED_IN" || event === "INITIAL_SESSION") {
+        setUser(session?.user ?? null);
+        if (session?.user) {
+          try { await fetchProfile(session.user.id); } catch (_e) {}
+        } else {
+          setProfile(null);
+        }
+        setLoading(false);
+        return;
+      }
+      // Any other event — update user state
       setUser(session?.user ?? null);
-      if (session?.user) await fetchProfile(session.user.id);
-      else setProfile(null);
+      if (!session?.user) setProfile(null);
       setLoading(false);
     });
+
     return () => { subscription.unsubscribe(); clearTimeout(t); };
   }, [fetchProfile]);
 
   const signOut = async () => {
-    try { await supabase.auth.signOut(); } catch (_e) {}
-    setUser(null); setProfile(null);
-    window.location.hash = "/auth";
+    // Clear local state immediately so UI responds right away
+    setUser(null);
+    setProfile(null);
+    // Then attempt server-side signout
+    try { await supabase.auth.signOut({ scope: "local" }); } catch (_e) {}
+    // Force navigation
+    window.location.href = window.location.pathname + "#/auth";
   };
 
   return (
@@ -122,7 +158,10 @@ function useRoute() {
     window.addEventListener("hashchange", h);
     return () => window.removeEventListener("hashchange", h);
   }, []);
-  const navigate = (to) => { window.location.hash = to; setPath(to); };
+  const navigate = useCallback((to) => {
+    window.location.hash = to;
+    setPath(to);
+  }, []);
   return { path, navigate };
 }
 
@@ -147,10 +186,14 @@ function useToast() {
 // ─── Shared primitives ────────────────────────────────────────────────────────
 
 function TaktoLogo({ size = 22 }) {
-  const w = Math.round(size * (204 / 60));
+  // New SVG viewBox is 0 0 200 62
+  const w = Math.round(size * (200 / 62));
   return (
-    <svg width={w} height={size} viewBox="0 0 204 60" fill="none" style={{ display: "block" }}>
-      <path d={TAKTO_PATH} fill={C.dark} />
+    <svg width={w} height={size} viewBox="0 0 200 62" fill="none" style={{ display: "block" }}>
+      <path d={TAKTO_O}  fill={C.dark} />
+      <path d={TAKTO_KT} fill={C.dark} />
+      <path d={TAKTO_A}  fill={C.dark} />
+      <polygon points={TAKTO_T} fill={C.dark} />
     </svg>
   );
 }
@@ -265,7 +308,7 @@ function Sidebar({ path, navigate }) {
               background: active ? C.green : "transparent",
               border: "none", borderRadius: active ? 6 : 0,
               color: active ? C.dark : C.grey,
-              fontSize: 32, fontWeight: 600,
+              fontSize: 32, fontWeight: 700,
               cursor: "pointer", fontFamily: "'Space Grotesk', sans-serif",
               marginBottom: 16, width: "auto",
               boxSizing: "border-box",
@@ -633,7 +676,9 @@ JSON: {"ideas":[{"title":"","hook":"","format":"","difficulty":"Easy|Medium|Hard
       );
       const parsed = JSON.parse(text.replace(/```json|```/g, "").trim());
       setIdeas(parsed.ideas || []);
-    } catch (_genErr) { }
+    } catch (genErr) {
+      console.error("Generate error:", genErr);
+    }
     setGenerating(false);
   };
 
@@ -1203,6 +1248,36 @@ function AppContent() {
   );
 }
 
+class ErrorBoundary extends React.Component {
+  constructor(props) { super(props); this.state = { hasError: false }; }
+  static getDerivedStateFromError() { return { hasError: true }; }
+  componentDidCatch(err) { console.error("App error:", err); }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ minHeight: "100vh", background: "#f3f3f3", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, padding: 24 }}>
+          <svg width="120" height="37" viewBox="0 0 200 62" fill="none">
+            <path d={TAKTO_O} fill="#17181e"/><path d={TAKTO_KT} fill="#17181e"/>
+            <path d={TAKTO_A} fill="#17181e"/><polygon points={TAKTO_T} fill="#17181e"/>
+          </svg>
+          <p style={{ fontSize: 18, fontWeight: 500, color: "#7f7f7f" }}>Something went wrong.</p>
+          <button onClick={() => window.location.reload()} style={{ height: 46, padding: "0 24px", background: "#6dff8d", border: "1px solid #17181e", borderRadius: 6, fontSize: 18, fontWeight: 700, cursor: "pointer", fontFamily: "'Space Grotesk', sans-serif" }}>
+            Reload
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 export default function App() {
-  return <><GlobalStyles /><AuthProvider><AppContent /></AuthProvider></>;
+  return (
+    <ErrorBoundary>
+      <GlobalStyles />
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </ErrorBoundary>
+  );
 }
