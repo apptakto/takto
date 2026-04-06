@@ -263,7 +263,7 @@ function Sidebar({ path, navigate }) {
               background: active ? C.green : "transparent",
               border: "none", borderRadius: active ? 6 : 0,
               color: active ? C.dark : C.grey,
-              fontSize: 32, fontWeight: 700,
+              fontSize: 32, fontWeight: 500,
               cursor: "pointer", fontFamily: "'Space Grotesk', sans-serif",
               marginBottom: 16,
               boxSizing: "border-box",
