@@ -147,7 +147,7 @@ function useToast() {
 // ─── Shared primitives ────────────────────────────────────────────────────────
 
 function TaktoLogo({ size = 22 }) {
-  const w = Math.round(size * 3.4); // 204/60
+  const w = Math.round(size * (204 / 60));
   return (
     <svg width={w} height={size} viewBox="0 0 204 60" fill="none" style={{ display: "block" }}>
       <path d={TAKTO_PATH} fill={C.dark} />
@@ -187,12 +187,14 @@ function Spinner({ size = 16 }) {
 // Chip from Figma: height 32px, border-radius 6px, padding 0 10px 1px 8px, font 18px Medium
 // selected = solid color, unselected = 25% opacity
 function Chip({ label, selected, onClick, color = C.green }) {
+  // White text on blue (technique chips), dark text on green/coral
+  const textColor = selected && color === C.blue ? C.white : C.dark;
   return (
     <button type="button" onClick={onClick} style={{
       height: 32, display: "inline-flex", alignItems: "center",
       padding: "0px 10px 1px 8px", borderRadius: 6,
       background: selected ? color : `${color}40`,
-      color: C.dark, border: "none", cursor: onClick ? "pointer" : "default",
+      color: textColor, border: "none", cursor: onClick ? "pointer" : "default",
       fontSize: 18, fontWeight: 500,
       fontFamily: "'Space Grotesk', sans-serif",
       whiteSpace: "nowrap", lineHeight: "normal",
@@ -208,8 +210,8 @@ function Tag({ label }) {
     <span style={{
       height: 20, display: "inline-flex", alignItems: "center",
       padding: "0 6px", borderRadius: 6,
-      background: C.grey20, color: C.dark,
-      fontSize: 10, fontWeight: 500,
+      background: C.grey10, color: C.dark,
+      fontSize: 12, fontWeight: 500,
       fontFamily: "'Space Grotesk', sans-serif",
       whiteSpace: "nowrap",
     }}>{label}</span>
@@ -256,16 +258,16 @@ function Sidebar({ path, navigate }) {
           const active = path === item.path;
           return (
             <button key={item.path} onClick={() => navigate(item.path)} style={{
-              display: "block", width: "100%", textAlign: "left",
+              display: "inline-block", textAlign: "left",
               padding: active ? "3px 10px" : "3px 10px",
               height: active ? 49 : undefined,
-              lineHeight: "normal",
+              lineHeight: active ? "43px" : "normal",
               background: active ? C.green : "transparent",
               border: "none", borderRadius: active ? 6 : 0,
               color: active ? C.dark : C.grey,
               fontSize: 32, fontWeight: 600,
               cursor: "pointer", fontFamily: "'Space Grotesk', sans-serif",
-              marginBottom: 16,
+              marginBottom: 16, width: "auto",
               boxSizing: "border-box",
             }}>
               {item.label}
@@ -598,8 +600,6 @@ function GenerateScreen() {
   const [generating, setGenerating] = useState(false);
   const [expandedIdx, setExpandedIdx] = useState(null);
   const [savedIds, setSavedIds] = useState(new Set());
-  const { show, ToastContainer } = useToast();
-
   const toggleTech = (t) => {
     if (t === "All of them") { setTechniques(["All of them"]); return; }
     setTechniques(p => {
@@ -633,7 +633,7 @@ JSON: {"ideas":[{"title":"","hook":"","format":"","difficulty":"Easy|Medium|Hard
       );
       const parsed = JSON.parse(text.replace(/```json|```/g, "").trim());
       setIdeas(parsed.ideas || []);
-    } catch (e) { show("Error: " + e.message); }
+    } catch (_genErr) { }
     setGenerating(false);
   };
 
@@ -645,17 +645,16 @@ JSON: {"ideas":[{"title":"","hook":"","format":"","difficulty":"Easy|Medium|Hard
       date_scheduled: format(addDays(new Date(), 1), "yyyy-MM-dd"),
       difficulty: idea.difficulty || "Medium", status: "pending",
     });
-    if (!error) { setSavedIds(p => new Set([...p, idx])); show("Saved to Schedule ✓"); }
+    if (!error) { setSavedIds(p => new Set([...p, idx])); }
   };
 
   const saveAll = async () => {
     for (let i = 0; i < ideas.length; i++) await saveIdea(ideas[i], i);
   };
 
-  return (
-    <div style={{ padding: "40px 40px 80px" }}>
-      <ToastContainer />
 
+  return (
+    <div style={{ padding: "40px 40px 80px", maxWidth: 800, margin: "0 auto" }}>
       {/* Top row: Trending now • | Generate Ideas ✦ */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 32, flexWrap: "wrap", gap: 12 }}>
         <button onClick={() => { setTrendingOn(p => !p); if (trendingOn) setSelectedHashtags([]); }} style={{
@@ -715,7 +714,7 @@ JSON: {"ideas":[{"title":"","hook":"","format":"","difficulty":"Easy|Medium|Hard
 
       {/* Empty state placeholder */}
       {!generating && ideas.length === 0 && (
-        <p style={{ fontSize: 24, fontWeight: 700, color: C.grey }}>
+        <p style={{ fontSize: 22, fontWeight: 400, color: C.grey }}>
           Hit Generate to get 6 ideas tailored to your niche and style...
         </p>
       )}
@@ -733,13 +732,13 @@ JSON: {"ideas":[{"title":"","hook":"","format":"","difficulty":"Easy|Medium|Hard
         <div className="fi">
           {/* "Saved ideas get scheduled automatically..." + Save All button */}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, flexWrap: "wrap", gap: 12 }}>
-            <p style={{ fontSize: 24, fontWeight: 700, color: C.grey }}>Saved ideas get scheduled automatically...</p>
+            <p style={{ fontSize: 22, fontWeight: 400, color: C.grey }}>Saved ideas get scheduled automatically...</p>
             <button onClick={saveAll} style={{
-              height: 46, padding: "0 14px", borderRadius: 6,
+              height: 36, padding: "0 12px", borderRadius: 6,
               background: C.green, border: `1px solid ${C.dark}`,
-              fontSize: 24, fontWeight: 700, color: C.dark,
+              fontSize: 16, fontWeight: 700, color: C.dark,
               cursor: "pointer", fontFamily: "'Space Grotesk', sans-serif",
-              display: "flex", alignItems: "center", gap: 6,
+              display: "flex", alignItems: "center", gap: 5,
             }}>
               Save All +
             </button>
@@ -767,25 +766,27 @@ JSON: {"ideas":[{"title":"","hook":"","format":"","difficulty":"Easy|Medium|Hard
                       {/* Save button — green, 46px tall, 110px wide with + icon */}
                       {!isSaved ? (
                         <button onClick={() => saveIdea(idea, i)} style={{
-                          height: 46, width: 110, borderRadius: 6,
+                          height: 36, padding: "0 12px", borderRadius: 6,
                           background: C.green, border: `1px solid ${C.dark}`,
-                          fontSize: 24, fontWeight: 700, color: C.dark,
+                          fontSize: 16, fontWeight: 700, color: C.dark,
                           cursor: "pointer", fontFamily: "'Space Grotesk', sans-serif",
-                          display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                          display: "flex", alignItems: "center", justifyContent: "center", gap: 5,
                         }}>
                           Save +
                         </button>
                       ) : (
-                        <div style={{ height: 46, width: 46, borderRadius: 6, background: C.green, border: `1px solid ${C.dark}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>✓</div>
+                        <div style={{ height: 36, width: 36, borderRadius: 6, background: C.green, border: `1px solid ${C.dark}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>✓</div>
                       )}
-                      {/* Expand chevron — thin arrow */}
+                      {/* Expand chevron — ∨ down when closed, ∧ up when open */}
                       <button onClick={() => setExpandedIdx(isExpanded ? null : i)} style={{
                         background: "none", border: "none", cursor: "pointer", padding: "4px",
                         display: "flex", alignItems: "center",
                       }}>
-                        <svg width="16" height="20" viewBox="0 0 16 20" fill="none">
-                          <line x1={isExpanded ? "2" : "4"} y1={isExpanded ? "14" : "4"} x2="8" y2={isExpanded ? "6" : "16"} stroke={C.dark} strokeWidth="2"/>
-                          <line x1="8" y1={isExpanded ? "6" : "16"} x2={isExpanded ? "14" : "12"} y2={isExpanded ? "14" : "4"} stroke={C.dark} strokeWidth="2"/>
+                        <svg width="18" height="12" viewBox="0 0 18 12" fill="none">
+                          {isExpanded
+                            ? <><line x1="1" y1="10" x2="9" y2="2" stroke={C.dark} strokeWidth="2.5" strokeLinecap="round"/><line x1="9" y1="2" x2="17" y2="10" stroke={C.dark} strokeWidth="2.5" strokeLinecap="round"/></>
+                            : <><line x1="1" y1="2" x2="9" y2="10" stroke={C.dark} strokeWidth="2.5" strokeLinecap="round"/><line x1="9" y1="10" x2="17" y2="2" stroke={C.dark} strokeWidth="2.5" strokeLinecap="round"/></>
+                          }
                         </svg>
                       </button>
                     </div>
@@ -793,16 +794,16 @@ JSON: {"ideas":[{"title":"","hook":"","format":"","difficulty":"Easy|Medium|Hard
 
                   {/* Expanded detail */}
                   {isExpanded && (
-                    <div className="fi" style={{ padding: "0 24px 20px", borderTop: `1px solid ${C.grey20}`, paddingTop: 16 }}>
+                    <div className="fi" style={{ padding: "16px 24px 20px" }}>
                       {idea.hook && (
                         <div style={{ marginBottom: 12 }}>
-                          <p style={{ fontSize: 14, fontWeight: 700, color: C.coral, marginBottom: 4 }}>Hook</p>
+                          <p style={{ fontSize: 14, fontWeight: 700, color: C.dark, marginBottom: 4 }}>Hook</p>
                           <p style={{ fontSize: 14, fontWeight: 400, color: C.dark, lineHeight: 1.5 }}>{idea.hook}</p>
                         </div>
                       )}
                       {idea.why_it_works && (
                         <div>
-                          <p style={{ fontSize: 14, fontWeight: 700, color: C.coral, marginBottom: 4 }}>Why it works</p>
+                          <p style={{ fontSize: 14, fontWeight: 700, color: C.dark, marginBottom: 4 }}>Why it works</p>
                           <p style={{ fontSize: 14, fontWeight: 400, color: C.dark, lineHeight: 1.5 }}>{idea.why_it_works}</p>
                         </div>
                       )}
@@ -881,7 +882,7 @@ function ScheduleScreen({ navigate }) {
   for (let i = 0; i < days.length; i += 7) weeks.push(days.slice(i, i + 7));
 
   return (
-    <div style={{ padding: "36px 40px 80px" }}>
+    <div style={{ padding: "36px 40px 80px", maxWidth: 800, margin: "0 auto" }}>
       <ToastContainer />
 
       {/* Month heading + nav — "April 2026" 24px SemiBold, Today/arrows grey */}
@@ -908,7 +909,7 @@ function ScheduleScreen({ navigate }) {
 
       {ideas.length === 0 ? (
         <div style={{ textAlign: "center", padding: "60px 0" }}>
-          <p style={{ fontSize: 22, color: C.grey, fontWeight: 500, marginBottom: 20 }}>No ideas scheduled yet</p>
+          <p style={{ fontSize: 22, fontWeight: 400, color: C.grey, marginBottom: 20 }}>No ideas scheduled yet</p>
           <button onClick={() => navigate("/generate")} style={{ height: 49, padding: "0 24px", borderRadius: 6, background: C.green, border: "none", fontSize: 24, fontWeight: 700, color: C.dark, cursor: "pointer", fontFamily: "'Space Grotesk', sans-serif" }}>
             Generate Ideas →
           </button>
@@ -1081,7 +1082,7 @@ function ProfileScreen() {
   );
 
   return (
-    <div style={{ padding: "36px 40px 80px" }}>
+    <div style={{ padding: "36px 40px 80px", maxWidth: 800, margin: "0 auto" }}>
       <ToastContainer />
 
       {/* "Creator Settings" — 24px SemiBold */}
