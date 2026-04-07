@@ -235,6 +235,60 @@ function useRoute() {
   return { path, navigate };
 }
 
+// ─── Auth redirect banner ─────────────────────────────────────────────────────
+// Detects Supabase redirect params on landing (email confirm, password reset etc.)
+function useAuthRedirectBanner() {
+  const [banner, setBanner] = useState(null);
+
+  useEffect(() => {
+    // Supabase puts params in the URL hash after redirect e.g. #type=email_change&...
+    const raw = window.location.hash;
+    const params = new URLSearchParams(raw.replace(/^#\/?/, ""));
+    const type = params.get("type");
+    const err  = params.get("error_description");
+
+    if (err) {
+      setBanner({ msg: decodeURIComponent(err.replace(/\+/g, " ")), ok: false });
+    } else if (type === "email_change") {
+      setBanner({ msg: "Email address updated successfully ✓", ok: true });
+    } else if (type === "signup") {
+      setBanner({ msg: "Email confirmed — welcome to Takto! ✓", ok: true });
+    } else if (type === "recovery") {
+      setBanner({ msg: "You can now set a new password below.", ok: true });
+    }
+
+    // Clean the hash so the params don't persist on refresh
+    if (type || err) {
+      window.history.replaceState(null, "", window.location.pathname);
+    }
+  }, []);
+
+  const dismiss = () => setBanner(null);
+  return { banner, dismiss };
+}
+
+function AuthBanner({ banner, dismiss }) {
+  if (!banner) return null;
+  return (
+    <div style={{
+      position: "fixed", top: 0, left: 0, right: 0, zIndex: 2000,
+      background: banner.ok ? C.green : C.coral,
+      borderBottom: `1px solid ${C.dark}`,
+      display: "flex", alignItems: "center", justifyContent: "space-between",
+      padding: "14px 24px", gap: 12,
+    }}>
+      <p style={{ fontSize: 16, fontWeight: 600, color: C.dark, margin: 0 }}>
+        {banner.msg}
+      </p>
+      <button onClick={dismiss} style={{
+        background: "none", border: "none", cursor: "pointer",
+        fontSize: 20, color: C.dark, lineHeight: 1, padding: "0 4px",
+        fontFamily: "'Space Grotesk', sans-serif",
+      }}>×</button>
+    </div>
+  );
+}
+
 // ─── Toast ────────────────────────────────────────────────────────────────────
 function useToast() {
   const [toasts, setToasts] = useState([]);
@@ -600,15 +654,20 @@ function AuthScreen() {
 // ONBOARDING — Figma 64:2991
 // ═══════════════════════════════════════════════════════════════════════════════
 const NICHES = [
-  "💄 Beauty & Makeup", "👗 Fashion & Style", "🌿 Health & Wellness", "✈️ Travel & Adventure",
-  "🍳 Food & Cooking", "💰 Side Hustles", "📈 Personal Finance", "💻 Tech & Gadgets",
-  "🎮 Gaming", "🎨 DIY & Crafts", "😂 Comedy & Memes", "🐾 Pet & Animals", "👨‍👩‍👧 Parenting & Family",
+  "💄 Beauty & Skincare", "👗 Fashion & Style", "🌿 Health & Wellness", "💪 Fitness & Gym",
+  "🍳 Food & Cooking", "✈️ Travel & Adventure", "📈 Personal Finance", "💰 Side Hustles",
+  "💻 Tech & Gadgets", "🎮 Gaming", "🧠 Self Improvement", "🏠 Home & Interior",
+  "🌱 Sustainable Living", "❤️ Relationships & Dating", "😂 Comedy & Entertainment",
+  "📚 Books & Education", "🐾 Pets & Animals", "👨‍👩‍👧 Parenting & Family",
+  "🎵 Music & Dance", "🍕 Food Reviews",
 ];
 const STYLES = [
-  "⭐ Personal Brand/Influencer", "🎭 Comedy/Skit", "📚 Tutorial/Educational",
-  "🔥 Challenge/Trend", "🌸 Aesthetic/Mood-Based", "💰 Side Hustles",
-  "📋 Review/Reaction", "📖 Storytime/Narration", "✨ Transformation/Glow-Up",
-  "🎨 DIY & Crafts", "💪 Motivational/Inspirational", "🎯 Niche Hobbyist",
+  "🎤 Talking Head / Vlog", "📍 POV", "🌅 Day in My Life", "🎓 Tutorial / How-To",
+  "💄 Get Ready With Me", "📖 Storytime", "😂 Comedy / Skit", "⚡ Reaction / Review",
+  "✨ Before & After", "🔥 Trend / Challenge", "🎓 Educational / Myth-Busting",
+  "🌸 Aesthetic / Mood", "🎬 Behind the Scenes", "❓ Q&A", "📦 Unboxing",
+  "🤝 Duet / Collab", "✍️ Text Overlay / Silent", "💪 Motivational",
+  "🍳 Recipe / Process", "🏠 Room / Setup Tour",
 ];
 
 function OnboardingScreen({ navigate }) {
@@ -1474,6 +1533,7 @@ function ProfileScreen() {
 function AppContent() {
   const { user, profile, loading } = useAuth();
   const { path, navigate } = useRoute();
+  const { banner, dismiss } = useAuthRedirectBanner();
 
   useEffect(() => {
     if (loading) return;
@@ -1485,6 +1545,7 @@ function AppContent() {
   if (loading) {
     return (
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "100vh", gap: 20, background: C.bg }}>
+        <AuthBanner banner={banner} dismiss={dismiss} />
         <TaktoLogo size={24} />
         <Spinner size={22} />
         {(!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) && (
@@ -1497,7 +1558,7 @@ function AppContent() {
     );
   }
 
-  if (!user) return <AuthScreen />;
+  if (!user) return <><AuthBanner banner={banner} dismiss={dismiss} /><AuthScreen /></>;
   if (profile && !profile.onboarding_completed) return <OnboardingScreen navigate={navigate} />;
   if (path === "/auth" || path === "/" || path === "/onboarding") { navigate("/generate"); return null; }
 
@@ -1508,9 +1569,12 @@ function AppContent() {
   };
 
   return (
-    <AppShell path={path} navigate={navigate}>
-      {screens[path] || <GenerateScreen />}
-    </AppShell>
+    <>
+      <AuthBanner banner={banner} dismiss={dismiss} />
+      <AppShell path={path} navigate={navigate}>
+        {screens[path] || <GenerateScreen />}
+      </AppShell>
+    </>
   );
 }
 
