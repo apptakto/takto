@@ -992,20 +992,26 @@ function ScheduleScreen({ navigate }) {
         </div>
       ) : (
         <>
-          {/* Calendar grid — no background on header row */}
-          <div style={{ width: "100%" }}>
-            {/* Day headers — no background, just text */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)" }}>
+          {/* Calendar — exact Figma structure:
+               - Fixed height container so all week rows share space equally
+               - Header: flex row with flex:1 per column (no borders, no bg)
+               - Week rows: flex:1 0 0 so each row is equal height
+               - Day cells: flex-col justify-between, date top, chips bottom via justify-end
+               - Both header and cells use flex:1 0 0 so columns align perfectly */}
+          <div style={{ display: "flex", flexDirection: "column", width: "100%", height: 800 }}>
+
+            {/* Header row — no border, no background, same flex layout as cells */}
+            <div style={{ display: "flex", flexShrink: 0 }}>
               {["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].map(day => (
-                <div key={day} style={{ padding: "6px 12px 10px", fontSize: 18, fontWeight: 500, color: C.dark }}>
+                <div key={day} style={{ flex: "1 0 0", padding: "6px 12px 10px", fontSize: 18, fontWeight: 500, color: C.dark, minWidth: 0 }}>
                   {day}
                 </div>
               ))}
             </div>
 
-            {/* Week rows — fixed height 130px, no flex */}
+            {/* Week rows — flex-1 so each row shares equal height */}
             {weeks.map((week, wi) => (
-              <div key={wi} style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)" }}>
+              <div key={wi} style={{ display: "flex", flex: "1 0 0", minHeight: 0 }}>
                 {week.map(day => {
                   const ds = format(day, "yyyy-MM-dd");
                   const dayIdeas = scheduledIdeas.filter(i => i.date_scheduled === ds);
@@ -1018,25 +1024,41 @@ function ScheduleScreen({ navigate }) {
                       onDragOver={e => e.preventDefault()}
                       onDrop={() => drop(ds)}
                       style={{
-                        height: 130,
+                        flex: "1 0 0",
                         border: `1px solid ${C.grey20}`,
-                        padding: "10px 10px 8px",
+                        padding: 12,
                         cursor: "pointer",
                         background: isSel ? `${C.green}15` : C.white,
                         display: "flex",
                         flexDirection: "column",
+                        justifyContent: "space-between",
+                        overflow: "hidden",
                         boxSizing: "border-box",
                         outline: isSel ? `2px solid ${C.dark}` : "none",
                         outlineOffset: -2,
+                        minWidth: 0,
                       }}
                     >
-                      {/* Date number */}
-                      <p style={{ fontSize: 24, fontWeight: 500, color: inMonth ? C.dark : C.grey20, lineHeight: 1, marginBottom: 6, flexShrink: 0 }}>
+                      {/* Date number — top, shrink-0 */}
+                      <p style={{
+                        fontSize: 24, fontWeight: 500,
+                        color: inMonth ? C.dark : C.grey20,
+                        lineHeight: "1.4", flexShrink: 0,
+                      }}>
                         {format(day, "d")}
                       </p>
 
-                      {/* Event chips — fill remaining space, overflow hidden */}
-                      <div style={{ display: "flex", flexDirection: "column", gap: 3, overflow: "hidden", flex: 1 }}>
+                      {/* Chips container — flex-1, justify-end pushes chips to bottom */}
+                      <div style={{
+                        flex: "1 0 0",
+                        display: "flex",
+                        flexDirection: "column",
+                        justifyContent: "flex-end",
+                        gap: 4,
+                        minHeight: 0,
+                        overflow: "hidden",
+                        width: "100%",
+                      }}>
                         {dayIdeas.slice(0, 3).map(idea => (
                           <div
                             key={idea.id}
@@ -1044,18 +1066,23 @@ function ScheduleScreen({ navigate }) {
                             onDragStart={e => { e.stopPropagation(); setDragId(idea.id); }}
                             onClick={e => e.stopPropagation()}
                             style={{
-                              height: 26, borderRadius: 6, padding: "0 6px",
+                              height: 26, borderRadius: 6,
+                              padding: "4px 6px",
                               background: C.green,
                               fontSize: 12, fontWeight: 400, color: C.dark,
-                              whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
-                              cursor: "grab", display: "flex", alignItems: "center", flexShrink: 0,
+                              whiteSpace: "nowrap", overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              cursor: "grab", flexShrink: 0,
+                              width: "100%", boxSizing: "border-box",
                             }}
                           >
-                            {idea.title.length > 16 ? idea.title.slice(0, 16) + "…" : idea.title}
+                            {idea.title}
                           </div>
                         ))}
                         {dayIdeas.length > 3 && (
-                          <p style={{ fontSize: 10, color: C.grey, lineHeight: 1 }}>+{dayIdeas.length - 3}</p>
+                          <p style={{ fontSize: 10, color: C.grey, lineHeight: 1, flexShrink: 0 }}>
+                            +{dayIdeas.length - 3} more
+                          </p>
                         )}
                       </div>
                     </div>
@@ -1065,7 +1092,7 @@ function ScheduleScreen({ navigate }) {
             ))}
           </div>
 
-          {/* Selected day detail */}
+                    {/* Selected day detail */}
           {selected && (
             <div className="fi" style={{ marginTop: 24 }}>
               <p style={{ fontSize: 20, fontWeight: 500, color: C.grey, marginBottom: 14 }}>
