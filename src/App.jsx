@@ -122,55 +122,86 @@ function AuthProvider({ children }) {
   }, [user, fetchIdeas]);
 
   useEffect(() => {
-    // Safety timeout — never stay stuck loading
     const t = setTimeout(() => setLoading(false), 5000);
+    let mounted = true;
 
-    // Get initial session
+    // Initial session fetch
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!mounted) return;
       clearTimeout(t);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        Promise.all([
-          fetchProfile(session.user.id),
-          fetchIdeas(session.user.id),
-        ]).finally(() => setLoading(false));
+      const u = session?.user ?? null;
+      setUser(u);
+      if (u) {
+        Promise.all([fetchProfile(u.id), fetchIdeas(u.id)]).finally(() => {
+          if (mounted) setLoading(false);
+        });
+      } else {
+        setLoading(false);
       }
-      else setLoading(false);
-    }).catch(() => { clearTimeout(t); setLoading(false); });
+    }).catch(() => { if (mounted) { clearTimeout(t); setLoading(false); } });
 
-    // Listen for auth changes — handle each event type explicitly
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    // Auth state listener — minimal state changes to avoid re-render cascades
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!mounted) return;
+      const u = session?.user ?? null;
+
       if (event === "SIGNED_OUT") {
         setUser(null); setProfile(null); setIdeas([]); setIdeasLoaded(false);
         setGeneratedIdeas([]); setSavedIdxs(new Set());
         setLoading(false);
         return;
       }
+
       if (event === "TOKEN_REFRESHED") {
-        // Token silently refreshed — just update user object, no need to re-fetch profile
-        setUser(session?.user ?? null);
+        // Only update the user token — do NOT re-fetch profile or trigger other effects
+        // Comparing by id prevents unnecessary re-renders when same user
+        setUser(prev => {
+          if (prev?.id === u?.id) return prev; // same user, keep reference stable
+          return u;
+        });
         return;
       }
-      if (event === "SIGNED_IN" || event === "INITIAL_SESSION") {
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          try { await fetchProfile(session.user.id); } catch (_e) {}
-          try { await fetchIdeas(session.user.id); } catch (_e) {}
-        } else {
-          setProfile(null);
-          setIdeas([]);
+
+      if (event === "SIGNED_IN") {
+        setUser(u);
+        if (u) {
+          fetchProfile(u.id).catch(() => {});
+          fetchIdeas(u.id).catch(() => {});
         }
         setLoading(false);
         return;
       }
-      // Any other event — update user state
-      setUser(session?.user ?? null);
-      if (!session?.user) setProfile(null);
+
+      // INITIAL_SESSION or anything else
+      if (event === "INITIAL_SESSION") return; // handled by getSession above
+      setUser(u);
+      if (!u) { setProfile(null); setIdeas([]); }
       setLoading(false);
     });
 
-    return () => { subscription.unsubscribe(); clearTimeout(t); };
-  }, [fetchProfile]);
+    // Refresh session when tab regains focus (handles idle/sleep freezes)
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        supabase.auth.getSession().then(({ data: { session } }) => {
+          if (!mounted) return;
+          if (!session?.user) {
+            // Session expired while away — sign out cleanly
+            setUser(null); setProfile(null); setIdeas([]);
+            setGeneratedIdeas([]); setSavedIdxs(new Set());
+          }
+          // If session is valid, Supabase handles token refresh automatically
+        }).catch(() => {});
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+      clearTimeout(t);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [fetchProfile, fetchIdeas]);
 
   const signOut = async () => {
     // Clear local state immediately so UI responds right away
@@ -679,6 +710,7 @@ function GenerateScreen() {
   const [selectedHashtags, setSelectedHashtags] = useState([]);
   const [trendingOn, setTrendingOn] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [appendingMore, setAppendingMore] = useState(false);
   const [expandedIdx, setExpandedIdx] = useState(null);
   const toggleTech = (t) => {
     if (t === "All of them") { setTechniques(["All of them"]); return; }
@@ -695,8 +727,12 @@ function GenerateScreen() {
 
   const generate = async (append = false) => {
     if (!profile) return;
-    setGenerating(true);
-    if (!append) { setExpandedIdx(null); }
+    if (append) {
+      setAppendingMore(true);
+    } else {
+      setGenerating(true);
+      setExpandedIdx(null);
+    }
     try {
       const techCtx = techniques.includes("All of them") ? "any technique" : techniques.join(", ");
       const hashCtx = selectedHashtags.length > 0 ? `\nTrending hashtags to incorporate: ${selectedHashtags.join(", ")}` : "";
@@ -727,6 +763,7 @@ JSON: {"ideas":[{"title":"","hook":"","format":"","difficulty":"Easy|Medium|Hard
       console.error("Generate error:", genErr);
     }
     setGenerating(false);
+    setAppendingMore(false);
   };
 
   const saveIdea = async (idea, idx) => {
@@ -805,14 +842,14 @@ JSON: {"ideas":[{"title":"","hook":"","format":"","difficulty":"Easy|Medium|Hard
         </div>
       </div>
 
-      {/* Empty state placeholder */}
-      {!generating && generatedIdeas.length === 0 && (
+      {/* Empty state — only when no ideas and not generating */}
+      {!generating && !appendingMore && generatedIdeas.length === 0 && (
         <p style={{ fontSize: 22, fontWeight: 400, color: C.grey }}>
           Hit Generate to get 6 ideas tailored to your niche and style...
         </p>
       )}
 
-      {/* Generating state */}
+      {/* Fresh generate loading state — replaces content */}
       {generating && (
         <div style={{ display: "flex", gap: 8, alignItems: "center", padding: "16px 0" }}>
           {[0,1,2].map(i => <div key={i} style={{ width: 10, height: 10, borderRadius: "50%", background: C.dark, animation: "blink 1.2s ease infinite", animationDelay: `${i * 0.2}s` }} />)}
@@ -820,7 +857,7 @@ JSON: {"ideas":[{"title":"","hook":"","format":"","difficulty":"Easy|Medium|Hard
         </div>
       )}
 
-      {/* Results */}
+      {/* Results — visible even while appendingMore loads more at bottom */}
       {!generating && generatedIdeas.length > 0 && (
         <div className="fi">
           {/* "Saved ideas get scheduled automatically..." + Save All button */}
@@ -907,16 +944,23 @@ JSON: {"ideas":[{"title":"","hook":"","format":"","difficulty":"Easy|Medium|Hard
             })}
           </div>
 
-          {/* Generate 6 more ideas... — 24px Bold underlined */}
+          {/* Generate 6 more ideas... / loading spinner */}
           <div style={{ textAlign: "center" }}>
-            <button onClick={() => generate(true)} style={{
-              background: "none", border: "none",
-              fontSize: 24, fontWeight: 700, color: C.dark,
-              textDecoration: "underline", cursor: "pointer",
-              fontFamily: "'Space Grotesk', sans-serif",
-            }}>
-              Generate 6 more ideas...
-            </button>
+            {appendingMore ? (
+              <div style={{ display: "flex", justifyContent: "center", gap: 8, alignItems: "center", padding: "8px 0" }}>
+                {[0,1,2].map(i => <div key={i} style={{ width: 8, height: 8, borderRadius: "50%", background: C.dark, animation: "blink 1.2s ease infinite", animationDelay: `${i * 0.2}s` }} />)}
+                <p style={{ fontSize: 16, color: C.grey, fontWeight: 500, marginLeft: 6 }}>Generating 6 more...</p>
+              </div>
+            ) : (
+              <button onClick={() => generate(true)} style={{
+                background: "none", border: "none",
+                fontSize: 24, fontWeight: 700, color: C.dark,
+                textDecoration: "underline", cursor: "pointer",
+                fontFamily: "'Space Grotesk', sans-serif",
+              }}>
+                Generate 6 more ideas...
+              </button>
+            )}
           </div>
         </div>
       )}
