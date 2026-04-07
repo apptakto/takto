@@ -748,7 +748,7 @@ function GenerateScreen() {
 - Technique: ${techCtx}
 ${hashCtx}${trendCtx}${avoidCtx}
 
-JSON: {"ideas":[{"title":"","hook":"","format":"","difficulty":"Easy|Medium|Hard","time_to_create":"15min|30min|1hr","why_it_works":""}]}`
+JSON: {"ideas":[{"title":"","hook":"","format":"1-2 word label e.g. Talking Head, POV, Carousel, Tutorial, Vlog, Duet, Reaction","difficulty":"Easy|Medium|Hard","time_to_create":"15min|30min|1hr","why_it_works":""}]}`
         , 2000
       );
       const parsed = JSON.parse(text.replace(/```json|```/g, "").trim());
@@ -766,19 +766,59 @@ JSON: {"ideas":[{"title":"","hook":"","format":"","difficulty":"Easy|Medium|Hard
     setAppendingMore(false);
   };
 
+  // Find next day with no scheduled idea, starting from tomorrow
+  const nextEmptyDay = (existingDates) => {
+    const taken = new Set(existingDates);
+    let candidate = addDays(new Date(), 1);
+    for (let i = 0; i < 365; i++) {
+      const ds = format(candidate, "yyyy-MM-dd");
+      if (!taken.has(ds)) return ds;
+      candidate = addDays(candidate, 1);
+    }
+    return format(addDays(new Date(), 1), "yyyy-MM-dd");
+  };
+
   const saveIdea = async (idea, idx) => {
     if (!user || savedIdxs.has(idx)) return;
+    // Find the next empty day not already used by saved ideas
+    const takenDates = ideas.filter(i => i.date_scheduled).map(i => i.date_scheduled);
+    const ds = nextEmptyDay(takenDates);
     const { error } = await supabase.from("content_ideas").insert({
       user_id: user.id, title: idea.title,
       description: `Hook: "${idea.hook}" | Format: ${idea.format} | Why it works: ${idea.why_it_works}`,
-      date_scheduled: format(addDays(new Date(), 1), "yyyy-MM-dd"),
+      date_scheduled: ds,
       difficulty: idea.difficulty || "Medium", status: "pending",
     });
-    if (!error) { setSavedIdxs(p => new Set([...p, idx])); await refreshIdeas(); }
+    if (!error) {
+      setSavedIdxs(p => new Set([...p, idx]));
+      await refreshIdeas();
+    }
   };
 
   const saveAll = async () => {
-    for (let i = 0; i < generatedIdeas.length; i++) await saveIdea(generatedIdeas[i], i);
+    // Save each idea to sequential empty days
+    const takenDates = new Set(ideas.filter(i => i.date_scheduled).map(i => i.date_scheduled));
+    for (let i = 0; i < generatedIdeas.length; i++) {
+      if (savedIdxs.has(i)) continue;
+      const idea = generatedIdeas[i];
+      // Find next empty day, expanding taken set as we go
+      let candidate = addDays(new Date(), 1);
+      for (let d = 0; d < 365; d++) {
+        const ds = format(candidate, "yyyy-MM-dd");
+        if (!takenDates.has(ds)) {
+          takenDates.add(ds);
+          await supabase.from("content_ideas").insert({
+            user_id: user.id, title: idea.title,
+            description: `Hook: "${idea.hook}" | Format: ${idea.format} | Why it works: ${idea.why_it_works}`,
+            date_scheduled: ds,
+            difficulty: idea.difficulty || "Medium", status: "pending",
+          });
+          setSavedIdxs(p => new Set([...p, i]));
+          break;
+        }
+        candidate = addDays(candidate, 1);
+      }
+    }
     await refreshIdeas();
   };
 
@@ -977,6 +1017,7 @@ function ScheduleScreen({ navigate }) {
   const [dragId, setDragId] = useState(null);
   const [selected, setSelected] = useState(null);
   const [expandedId, setExpandedId] = useState(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null); // id of idea pending delete confirm
 
   // Refresh ideas when screen mounts (in case new ones were saved)
   useEffect(() => { if (user) refreshIdeas(); }, [user, refreshIdeas]);
@@ -991,11 +1032,17 @@ function ScheduleScreen({ navigate }) {
     setDragId(null);
   };
 
-  const deleteIdea = async (id) => {
+  const requestDelete = (id) => setConfirmDeleteId(id);
+
+  const confirmDelete = async () => {
+    const id = confirmDeleteId;
+    setConfirmDeleteId(null);
     await supabase.from("content_ideas").delete().eq("id", id);
     setIdeas(p => p.filter(i => i.id !== id));
     if (expandedId === id) setExpandedId(null);
   };
+
+  const cancelDelete = () => setConfirmDeleteId(null);
 
   // Parse hook/format/difficulty/time from description field
   const parseDesc = (desc) => {
@@ -1173,8 +1220,8 @@ function ScheduleScreen({ navigate }) {
                             </div>
                           </div>
                           <div style={{ display: "flex", gap: 8, flexShrink: 0, alignItems: "center" }}>
-                            {/* × removes from schedule */}
-                            <button onClick={() => deleteIdea(idea.id)} style={{
+                            {/* × removes from schedule — asks for confirm */}
+                            <button onClick={() => requestDelete(idea.id)} style={{
                               width: 36, height: 36, borderRadius: 6,
                               background: C.bg, border: `1px solid ${C.dark}`,
                               fontSize: 20, color: C.dark, cursor: "pointer",
@@ -1221,6 +1268,39 @@ function ScheduleScreen({ navigate }) {
             </div>
           )}
         </>
+      )}
+      {/* Delete confirmation modal */}
+      {confirmDeleteId && (
+        <div style={{
+          position: "fixed", inset: 0, background: "rgba(23,24,30,0.5)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          zIndex: 1000, padding: 20,
+        }}>
+          <div style={{
+            background: C.white, border: `1px solid ${C.dark}`,
+            borderRadius: 25, boxShadow: CARD_SHADOW,
+            padding: "32px 36px", maxWidth: 420, width: "100%", textAlign: "center",
+          }}>
+            <p style={{ fontSize: 22, fontWeight: 700, marginBottom: 10 }}>Remove this post?</p>
+            <p style={{ fontSize: 16, fontWeight: 400, color: C.grey, marginBottom: 28, lineHeight: 1.5 }}>
+              This will remove it from your schedule. You can generate new ideas any time.
+            </p>
+            <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
+              <button onClick={cancelDelete} style={{
+                height: 46, padding: "0 24px", borderRadius: 6,
+                background: C.bg, border: `1px solid ${C.dark}`,
+                fontSize: 18, fontWeight: 600, color: C.dark,
+                cursor: "pointer", fontFamily: "'Space Grotesk', sans-serif",
+              }}>Keep it</button>
+              <button onClick={confirmDelete} style={{
+                height: 46, padding: "0 24px", borderRadius: 6,
+                background: C.dark, border: "none",
+                fontSize: 18, fontWeight: 600, color: C.white,
+                cursor: "pointer", fontFamily: "'Space Grotesk', sans-serif",
+              }}>Remove</button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
