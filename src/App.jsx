@@ -69,9 +69,11 @@ function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
-  // Ideas lifted here so they persist across screen navigation
+  // Ideas and generated results lifted here so they persist across screen navigation
   const [ideas, setIdeas] = useState([]);
   const [ideasLoaded, setIdeasLoaded] = useState(false);
+  const [generatedIdeas, setGeneratedIdeas] = useState([]);
+  const [savedIdxs, setSavedIdxs] = useState(new Set());
 
   const fetchProfile = useCallback(async (uid) => {
     try {
@@ -140,6 +142,7 @@ function AuthProvider({ children }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === "SIGNED_OUT") {
         setUser(null); setProfile(null); setIdeas([]); setIdeasLoaded(false);
+        setGeneratedIdeas([]); setSavedIdxs(new Set());
         setLoading(false);
         return;
       }
@@ -180,7 +183,7 @@ function AuthProvider({ children }) {
   };
 
   return (
-    <AuthCtx.Provider value={{ user, profile, loading, signOut, refreshProfile, ideas, setIdeas, ideasLoaded, refreshIdeas }}>
+    <AuthCtx.Provider value={{ user, profile, loading, signOut, refreshProfile, ideas, setIdeas, ideasLoaded, refreshIdeas, generatedIdeas, setGeneratedIdeas, savedIdxs, setSavedIdxs }}>
       {children}
     </AuthCtx.Provider>
   );
@@ -671,14 +674,12 @@ const POST_TECHNIQUES = ["All of them", "Talking Heads", "POV B-Roll", "Day in m
 const TRENDING_HASHTAGS = ["#dayinmylife", "#hottake", "#unpopularopinion", "#getreadywithme", "#whatieatinaday", "#letmeshowyou", "#trieditsoyoudonthaveto", "#thingsthatjustmakesense", "#thingsnobodytellsyou"];
 
 function GenerateScreen() {
-  const { user, profile, ideas, setIdeas, refreshIdeas } = useAuth();
+  const { user, profile, ideas, setIdeas, refreshIdeas, generatedIdeas, setGeneratedIdeas, savedIdxs, setSavedIdxs } = useAuth();
   const [techniques, setTechniques] = useState(["All of them"]);
   const [selectedHashtags, setSelectedHashtags] = useState([]);
   const [trendingOn, setTrendingOn] = useState(false);
   const [generating, setGenerating] = useState(false);
-  const [generatedIdeas, setGeneratedIdeas] = useState([]);
   const [expandedIdx, setExpandedIdx] = useState(null);
-  const [savedIds, setSavedIds] = useState(new Set());
   const toggleTech = (t) => {
     if (t === "All of them") { setTechniques(["All of them"]); return; }
     setTechniques(p => {
@@ -692,26 +693,36 @@ function GenerateScreen() {
     if (v?.trim()) setTechniques(p => [...p.filter(x => x !== "All of them"), v.trim()]);
   };
 
-  const generate = async () => {
+  const generate = async (append = false) => {
     if (!profile) return;
-    setGenerating(true); setGeneratedIdeas([]); setExpandedIdx(null); setSavedIds(new Set());
+    setGenerating(true);
+    if (!append) { setExpandedIdx(null); }
     try {
       const techCtx = techniques.includes("All of them") ? "any technique" : techniques.join(", ");
       const hashCtx = selectedHashtags.length > 0 ? `\nTrending hashtags to incorporate: ${selectedHashtags.join(", ")}` : "";
       const trendCtx = trendingOn ? "\nMake ideas trend-aware and optimised for viral reach." : "";
+      // Avoid duplicates — pass existing titles so Claude doesn't repeat them
+      const existing = generatedIdeas.map(i => i.title).filter(Boolean);
+      const avoidCtx = existing.length > 0 ? `\nDo NOT repeat these already-generated ideas: ${existing.join("; ")}` : "";
       const text = await callClaude(
         "You are Takto, a UGC content strategist. Return ONLY valid JSON, no markdown.",
         `Generate 6 ideas for:
 - Niches: ${profile.niche?.join(", ")}
 - Styles: ${profile.style?.join(", ")}
 - Technique: ${techCtx}
-${hashCtx}${trendCtx}
+${hashCtx}${trendCtx}${avoidCtx}
 
 JSON: {"ideas":[{"title":"","hook":"","format":"","difficulty":"Easy|Medium|Hard","time_to_create":"15min|30min|1hr","why_it_works":""}]}`
         , 2000
       );
       const parsed = JSON.parse(text.replace(/```json|```/g, "").trim());
-      setGeneratedIdeas(parsed.ideas || []);
+      const newIdeas = parsed.ideas || [];
+      if (append) {
+        setGeneratedIdeas(prev => [...prev, ...newIdeas]);
+      } else {
+        setGeneratedIdeas(newIdeas);
+        setSavedIdxs(new Set());
+      }
     } catch (genErr) {
       console.error("Generate error:", genErr);
     }
@@ -719,14 +730,14 @@ JSON: {"ideas":[{"title":"","hook":"","format":"","difficulty":"Easy|Medium|Hard
   };
 
   const saveIdea = async (idea, idx) => {
-    if (!user || savedIds.has(idx)) return;
+    if (!user || savedIdxs.has(idx)) return;
     const { error } = await supabase.from("content_ideas").insert({
       user_id: user.id, title: idea.title,
       description: `Hook: "${idea.hook}" | Format: ${idea.format} | Why it works: ${idea.why_it_works}`,
       date_scheduled: format(addDays(new Date(), 1), "yyyy-MM-dd"),
       difficulty: idea.difficulty || "Medium", status: "pending",
     });
-    if (!error) { setSavedIds(p => new Set([...p, idx])); await refreshIdeas(); }
+    if (!error) { setSavedIdxs(p => new Set([...p, idx])); await refreshIdeas(); }
   };
 
   const saveAll = async () => {
@@ -830,7 +841,7 @@ JSON: {"ideas":[{"title":"","hook":"","format":"","difficulty":"Easy|Medium|Hard
           <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 24 }}>
             {generatedIdeas.map((idea, i) => {
               const isExpanded = expandedIdx === i;
-              const isSaved = savedIds.has(i);
+              const isSaved = savedIdxs.has(i);
               return (
                 <IdeaCard key={i} className="fu" style={{ animationDelay: `${i * 40}ms` }}>
                   {/* Collapsed row */}
@@ -898,7 +909,7 @@ JSON: {"ideas":[{"title":"","hook":"","format":"","difficulty":"Easy|Medium|Hard
 
           {/* Generate 6 more ideas... — 24px Bold underlined */}
           <div style={{ textAlign: "center" }}>
-            <button onClick={generate} style={{
+            <button onClick={() => generate(true)} style={{
               background: "none", border: "none",
               fontSize: 24, fontWeight: 700, color: C.dark,
               textDecoration: "underline", cursor: "pointer",
@@ -1188,6 +1199,9 @@ function ProfileScreen() {
   const [styles, setStyles] = useState([]);
   const [notifs, setNotifs] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [newEmail, setNewEmail] = useState("");
+  const [emailMsg, setEmailMsg] = useState("");
+  const [savingEmail, setSavingEmail] = useState(false);
   const { show, ToastContainer } = useToast();
 
   useEffect(() => {
@@ -1197,6 +1211,23 @@ function ProfileScreen() {
       setNotifs(profile.notifications_enabled ?? true);
     }
   }, [profile]);
+
+  useEffect(() => {
+    if (user) setNewEmail(user.email || "");
+  }, [user]);
+
+  const changeEmail = async () => {
+    if (!newEmail || newEmail === user.email) return;
+    setSavingEmail(true);
+    setEmailMsg("");
+    const { error } = await supabase.auth.updateUser({ email: newEmail });
+    if (error) {
+      setEmailMsg("Error: " + error.message);
+    } else {
+      setEmailMsg("Confirmation sent to " + newEmail + " — check your inbox.");
+    }
+    setSavingEmail(false);
+  };
 
   const save = async () => {
     setSaving(true);
@@ -1228,19 +1259,36 @@ function ProfileScreen() {
       <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 32 }}>Creator Settings</h1>
 
       {/* Email + Edit row */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 36 }}>
-        <div style={{ background: C.grey10, border: `1px solid ${C.dark}`, borderRadius: 6, height: 46, padding: "0 18px", display: "flex", alignItems: "center" }}>
-          <span style={{ fontSize: 24, fontWeight: 700, color: C.dark }}>{user?.email}</span>
+      <div style={{ marginBottom: 28 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
+          <input
+            type="email"
+            value={newEmail}
+            onChange={e => { setNewEmail(e.target.value); setEmailMsg(""); }}
+            style={{ background: C.grey10, border: `1px solid ${C.dark}`, borderRadius: 6, height: 46, padding: "0 18px", fontSize: 20, fontWeight: 700, color: C.dark, fontFamily: "'Space Grotesk', sans-serif", flex: 1, outline: "none" }}
+          />
+          {!editing ? (
+            <button onClick={() => setEditing(true)} style={{ background: "none", border: "none", fontSize: 24, fontWeight: 700, color: C.grey, textDecoration: "underline", cursor: "pointer", fontFamily: "'Space Grotesk', sans-serif", flexShrink: 0 }}>Edit</button>
+          ) : (
+            <div style={{ display: "flex", gap: 12, alignItems: "center", flexShrink: 0 }}>
+              <button onClick={() => setEditing(false)} style={{ background: "none", border: "none", fontSize: 18, fontWeight: 500, color: C.grey, cursor: "pointer", fontFamily: "'Space Grotesk', sans-serif" }}>Cancel</button>
+              <button onClick={save} disabled={saving} style={{ height: 46, padding: "0 20px", borderRadius: 6, background: C.green, border: "none", fontSize: 20, fontWeight: 700, color: C.dark, cursor: saving ? "not-allowed" : "pointer", fontFamily: "'Space Grotesk', sans-serif", display: "flex", alignItems: "center", gap: 8 }}>
+                {saving && <Spinner size={14} />} Save
+              </button>
+            </div>
+          )}
         </div>
-        {!editing ? (
-          <button onClick={() => setEditing(true)} style={{ background: "none", border: "none", fontSize: 24, fontWeight: 700, color: C.grey, textDecoration: "underline", cursor: "pointer", fontFamily: "'Space Grotesk', sans-serif" }}>Edit</button>
-        ) : (
-          <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
-            <button onClick={() => setEditing(false)} style={{ background: "none", border: "none", fontSize: 20, fontWeight: 500, color: C.grey, cursor: "pointer", fontFamily: "'Space Grotesk', sans-serif" }}>Cancel</button>
-            <button onClick={save} disabled={saving} style={{ height: 46, padding: "0 20px", borderRadius: 6, background: C.green, border: "none", fontSize: 24, fontWeight: 700, color: C.dark, cursor: saving ? "not-allowed" : "pointer", fontFamily: "'Space Grotesk', sans-serif", display: "flex", alignItems: "center", gap: 8 }}>
-              {saving && <Spinner size={14} />} Save
+        {/* Email change — only show if address differs from current */}
+        {newEmail && newEmail !== user?.email && (
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <button onClick={changeEmail} disabled={savingEmail} style={{ height: 36, padding: "0 14px", borderRadius: 6, background: C.dark, border: "none", color: C.white, fontSize: 14, fontWeight: 600, cursor: savingEmail ? "not-allowed" : "pointer", fontFamily: "'Space Grotesk', sans-serif", display: "flex", alignItems: "center", gap: 6 }}>
+              {savingEmail && <Spinner size={12} />} Update email
             </button>
+            {emailMsg && <p style={{ fontSize: 13, color: emailMsg.startsWith("Error") ? C.coral : "#22c55e" }}>{emailMsg}</p>}
           </div>
+        )}
+        {emailMsg && newEmail === user?.email && (
+          <p style={{ fontSize: 13, color: "#22c55e" }}>{emailMsg}</p>
         )}
       </div>
 
