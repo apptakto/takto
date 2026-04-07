@@ -1408,11 +1408,11 @@ function ProfileScreen() {
             <button onClick={changeEmail} disabled={savingEmail} style={{ height: 36, padding: "0 14px", borderRadius: 6, background: C.dark, border: "none", color: C.white, fontSize: 14, fontWeight: 600, cursor: savingEmail ? "not-allowed" : "pointer", fontFamily: "'Space Grotesk', sans-serif", display: "flex", alignItems: "center", gap: 6 }}>
               {savingEmail && <Spinner size={12} />} Update email
             </button>
-            {emailMsg && <p style={{ fontSize: 13, color: emailMsg.startsWith("Error") ? C.coral : "#22c55e" }}>{emailMsg}</p>}
+            {emailMsg && <p style={{ fontSize: 16, color: emailMsg.startsWith("Error") ? C.coral : C.grey }}>{emailMsg}</p>}
           </div>
         )}
         {emailMsg && newEmail === user?.email && (
-          <p style={{ fontSize: 13, color: "#22c55e" }}>{emailMsg}</p>
+          <p style={{ fontSize: 16, color: "#7f7f7f" }}>{emailMsg}</p>
         )}
       </div>
 
