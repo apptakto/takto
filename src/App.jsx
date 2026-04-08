@@ -738,7 +738,7 @@ function OnboardingScreen({ navigate }) {
         <div style={{ marginTop: 40, display: "flex", justifyContent: "center" }}>
           <button onClick={finish} disabled={busy} style={{
             background: C.green, border: "none", borderRadius: 6,
-            height: 49, padding: "0 40px",
+            height: 49, padding: "0 20px",
             fontSize: 26, fontWeight: 700, color: C.dark,
             cursor: busy ? "not-allowed" : "pointer",
             fontFamily: "'Space Grotesk', sans-serif",
