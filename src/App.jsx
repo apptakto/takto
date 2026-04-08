@@ -760,8 +760,8 @@ function OnboardingScreen({ navigate }) {
 // Post Technique: blue chips
 // Cards: #f3f3f3, border 1px #17181e, radius 25px, shadow 0 5px 0 0 #17181e
 // ═══════════════════════════════════════════════════════════════════════════════
-const POST_TECHNIQUES = ["All of them", "Talking Heads", "POV B-Roll", "Day in my Life", "Story Narrative", "Split Screen Comparison", "Text Overlay Carousel"];
-const TRENDING_HASHTAGS = ["#dayinmylife", "#hottake", "#unpopularopinion", "#getreadywithme", "#whatieatinaday", "#letmeshowyou", "#trieditsoyoudonthaveto", "#thingsthatjustmakesense", "#thingsnobodytellsyou"];
+const POST_TECHNIQUES = ["All of them", "Talking Head", "POV", "Day in My Life", "GRWM", "Tutorial", "Storytime", "Text Overlay", "Before & After", "Duet / Reaction"];
+const TRENDING_HASHTAGS = ["#dayinmylife", "#grwm", "#storytime", "#hotgirlwalk", "#whatieatinaday", "#thatgirl", "#softlife", "#realtalk", "#unfiltered", "#tiktokmademebuyit"];
 
 function GenerateScreen() {
   const { user, profile, ideas, setIdeas, refreshIdeas, generatedIdeas, setGeneratedIdeas, savedIdxs, setSavedIdxs } = useAuth();
@@ -807,7 +807,7 @@ function GenerateScreen() {
 - Technique: ${techCtx}
 ${hashCtx}${trendCtx}${avoidCtx}
 
-JSON: {"ideas":[{"title":"","hook":"","format":"1-2 word label e.g. Talking Head, POV, Carousel, Tutorial, Vlog, Duet, Reaction","difficulty":"Easy|Medium|Hard","time_to_create":"15min|30min|1hr","why_it_works":""}]}`
+JSON: {"ideas":[{"title":"","hook":"","format":"2-3 word max e.g. Talking Head, POV, Tutorial, GRWM, Storytime, Text Overlay, Before & After","difficulty":"Easy|Medium|Hard","time_to_create":"15min|30min|1hr","why_it_works":""}]}`
         , 2000
       );
       const parsed = JSON.parse(text.replace(/```json|```/g, "").trim());
